@@ -179,8 +179,7 @@ class PerAppProxyViewModel(
                 Timber.w(e, "per-app save failed")
                 // Without this the ✓ looks dead: onSaved is skipped, so the
                 // route stays open and nothing tells the user why. SaveFailed
-                // now means exactly one thing: neither the config file nor the
-                // prefs copy persisted — see PerAppRepository.save.
+                // means the authoritative config file could not be replaced.
                 _events.tryEmit(PerAppEvent.SaveFailed)
             } finally {
                 saving = false

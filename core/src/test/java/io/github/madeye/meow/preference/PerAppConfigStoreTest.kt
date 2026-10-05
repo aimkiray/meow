@@ -61,17 +61,21 @@ class PerAppConfigStoreTest {
     }
 
     @Test
-    fun `clear drops the file and any tmp leftover`() {
-        // The write-failure path relies on this: with the stale file gone,
-        // the just-written SharedPreferences keys become the source again.
-        val store = PerAppConfigStore(storeFile())
+    fun `failed save preserves the last cross-process config`() {
+        val file = storeFile()
+        val store = PerAppConfigStore(file)
         store.save("bypass", setOf("a.b.c"))
-        File(tmp.root, "per_app.tmp").writeText("leftover")
-
-        store.clear()
-
-        assertNull(store.load())
-        assertFalse(storeFile().exists())
-        assertFalse(File(tmp.root, "per_app.tmp").exists())
+        // A directory at the staging path forces a real write failure.
+        File(file.path + ".tmp").mkdir()
+        val repo = io.github.madeye.meow.repo.PerAppRepository(store = store)
+        org.junit.Assert.assertThrows(java.io.IOException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.save(io.github.madeye.meow.repo.PerAppConfig(
+                    io.github.madeye.meow.repo.PerAppMode.Proxy, setOf("x.y.z"),
+                ))
+            }
+        }
+        assertEquals(PerAppConfigStore.Stored("bypass", setOf("a.b.c")),
+            PerAppConfigStore(file).load())
     }
 }
