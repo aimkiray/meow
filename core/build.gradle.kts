@@ -1,4 +1,5 @@
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
+import java.io.File
 import java.net.URI
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
@@ -139,11 +140,14 @@ cargo {
             ).forEach { (triple, cmakeAbi) ->
                 val wrapper = layout.buildDirectory.file("cmakeToolchains/$triple.cmake").get().asFile
                 wrapper.parentFile.mkdirs()
+                // invariantSeparatorsPath: CMake parses "\U" etc. as
+                // escapes — a backslashed Windows absolutePath is a
+                // syntax error on a fresh configure.
                 wrapper.writeText(
                     """
                     set(ANDROID_ABI $cmakeAbi)
                     set(ANDROID_PLATFORM android-$cmakeMinSdk)
-                    include("${ndkToolchainFile.absolutePath}")
+                    include("${ndkToolchainFile.invariantSeparatorsPath}")
                     """.trimIndent() + "\n"
                 )
                 spec.environment("CMAKE_TOOLCHAIN_FILE_$triple", wrapper.absolutePath)
@@ -162,9 +166,32 @@ cargo {
             // -arch/-isysroot flags leak into the android-clang try-compile).
             // Prefer the SDK-bundled CMake 3.x; the `cmake` crate honors $CMAKE.
             android.sdkDirectory.resolve("cmake").listFiles()
-                ?.filter { it.name.startsWith("3.") && it.resolve("bin/cmake").exists() }
+                // bin/cmake on POSIX, bin/cmake.exe on Windows — the
+                // plain name never exists there, so check both.
+                ?.filter { dir ->
+                    dir.name.startsWith("3.") &&
+                        listOf("bin/cmake", "bin/cmake.exe").any { dir.resolve(it).exists() }
+                }
                 ?.maxByOrNull { it.name }
-                ?.let { spec.environment("CMAKE", it.resolve("bin/cmake").absolutePath) }
+                ?.let { cmakeDir ->
+                    listOf("bin/cmake", "bin/cmake.exe")
+                        .map { cmakeDir.resolve(it) }
+                        .first { it.exists() }
+                        .let { spec.environment("CMAKE", it.absolutePath) }
+                    // Fresh configures on Windows: the `cmake` crate passes no
+                    // -G, so cmake defaults to the Visual Studio generator and
+                    // dies in VCTargetsPath detection before the NDK toolchain
+                    // file can apply. The SDK cmake bundle ships ninja.exe —
+                    // pin the generator and put its bin dir on PATH.
+                    val ninja = cmakeDir.resolve("bin/ninja.exe")
+                    if (System.getProperty("os.name").startsWith("Windows") && ninja.exists()) {
+                        spec.environment("CMAKE_GENERATOR", "Ninja")
+                        spec.environment(
+                            "PATH",
+                            "${cmakeDir.resolve("bin").absolutePath}${File.pathSeparator}${System.getenv("PATH")}",
+                        )
+                    }
+                }
         }
     }
 }
