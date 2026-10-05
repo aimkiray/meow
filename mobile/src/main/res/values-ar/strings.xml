@@ -30,6 +30,7 @@
     <string name="common_retry">إعادة المحاولة</string>
     <string name="common_discard">تجاهل</string>
     <string name="common_back">رجوع</string>
+    <string name="common_more_options">خيارات إضافية</string>
     <string name="common_close">إغلاق</string>
 
     <!-- Home -->
@@ -223,10 +224,34 @@
     <string name="perapp_mode_bypass">باستثناء المحددة</string>
     <string name="perapp_search">البحث في التطبيقات…</string>
     <string name="perapp_show_system">عرض تطبيقات النظام</string>
+    <string name="perapp_hide_system">إخفاء تطبيقات النظام</string>
     <string name="perapp_select_all">تحديد الكل</string>
     <string name="perapp_deselect_all">إلغاء تحديد الكل</string>
+    <string name="perapp_select_domestic">تحديد التطبيقات الصينية</string>
+    <string name="perapp_domestic_none">لم يُعثر على أي تطبيقات صينية</string>
+    <string name="perapp_domestic_already">كل التطبيقات الصينية محددة مسبقًا</string>
+    <string name="perapp_domestic_already_eligible">كل التطبيقات المؤهلة محددة مسبقًا</string>
+    <string name="perapp_domestic_failed">لم يكتمل الفحص، حاول مرة أخرى</string>
+    <string name="perapp_save_failed">تعذر حفظ اختيار التطبيقات</string>
+    <string name="perapp_status">\u2068%1$s\u2069، \u2068%2$s\u2069</string>
+    <plurals name="perapp_domestic_added">
+        <item quantity="zero">لم يُحدَّد أي تطبيق صيني</item>
+        <item quantity="one">تم تحديد تطبيق صيني واحد</item>
+        <item quantity="two">تم تحديد تطبيقين صينيين</item>
+        <item quantity="few">تم تحديد %1$d تطبيقات صينية</item>
+        <item quantity="many">تم تحديد %1$d تطبيقًا صينيًا</item>
+        <item quantity="other">تم تحديد %1$d تطبيق صيني</item>
+    </plurals>
+    <plurals name="perapp_domestic_skipped_uid">
+        <item quantity="zero">(لم يُتخطَّ أي تطبيق على UID مشترك)</item>
+        <item quantity="one">(تم تخطي تطبيق واحد على UID مشترك)</item>
+        <item quantity="two">(تم تخطي تطبيقين على UID مشترك)</item>
+        <item quantity="few">(تم تخطي %1$d تطبيقات على UID مشترك)</item>
+        <item quantity="many">(تم تخطي %1$d تطبيقًا على UID مشترك)</item>
+        <item quantity="other">(تم تخطي %1$d تطبيق على UID مشترك)</item>
+    </plurals>
     <string name="perapp_disabled_hint">معطّل إلى أن تحدِّد تطبيقًا واحدًا على الأقل</string>
-    <string name="perapp_restart_required">أعِد الاتصال بشبكة VPN لتفعيل التغييرات</string>
+    <string name="perapp_restart_required">أعِد اتصال VPN</string>
     <plurals name="perapp_selected">
         <item quantity="zero">لم يُحدَّد أي تطبيق</item>
         <item quantity="one">تطبيق واحد محدد</item>

@@ -18,6 +18,7 @@
     <string name="common_retry">Повторить</string>
     <string name="common_discard">Не сохранять</string>
     <string name="common_back">Назад</string>
+    <string name="common_more_options">Дополнительные действия</string>
     <string name="common_close">Закрыть</string>
 
     <!-- Home -->
@@ -209,10 +210,30 @@
     <string name="perapp_mode_bypass">Кроме выбранных</string>
     <string name="perapp_search">Поиск приложений…</string>
     <string name="perapp_show_system">Показывать системные приложения</string>
+    <string name="perapp_hide_system">Скрывать системные приложения</string>
     <string name="perapp_select_all">Выбрать все</string>
     <string name="perapp_deselect_all">Снять выбор</string>
+    <string name="perapp_select_domestic">Выбрать китайские приложения</string>
+    <string name="perapp_domestic_none">Китайские приложения не найдены</string>
+    <string name="perapp_domestic_already">Все китайские приложения уже выбраны</string>
+    <string name="perapp_domestic_already_eligible">Всё доступное для выбора уже выбрано</string>
+    <string name="perapp_domestic_failed">Сканирование не завершено, попробуйте ещё раз</string>
+    <string name="perapp_save_failed">Не удалось сохранить выбор приложений</string>
+    <string name="perapp_status">%1$s — %2$s</string>
+    <plurals name="perapp_domestic_added">
+        <item quantity="one">Выбрано %1$d китайское приложение</item>
+        <item quantity="few">Выбрано %1$d китайских приложения</item>
+        <item quantity="many">Выбрано %1$d китайских приложений</item>
+        <item quantity="other">Выбрано %1$d китайских приложения</item>
+    </plurals>
+    <plurals name="perapp_domestic_skipped_uid">
+        <item quantity="one">(пропущено %1$d приложение с общим UID)</item>
+        <item quantity="few">(пропущено %1$d приложения с общим UID)</item>
+        <item quantity="many">(пропущено %1$d приложений с общим UID)</item>
+        <item quantity="other">(пропущено %1$d приложения с общим UID)</item>
+    </plurals>
     <string name="perapp_disabled_hint">Не действует, пока не выбрано ни одного приложения</string>
-    <string name="perapp_restart_required">Переподключите VPN, чтобы применить изменения</string>
+    <string name="perapp_restart_required">переподключите VPN</string>
     <plurals name="perapp_selected">
         <item quantity="one">Выбрано: %1$d</item>
         <item quantity="few">Выбрано: %1$d</item>

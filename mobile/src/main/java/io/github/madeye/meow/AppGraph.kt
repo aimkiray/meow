@@ -11,6 +11,7 @@ import io.github.madeye.meow.net.ExitIpLookup
 import io.github.madeye.meow.preference.ExitIpPreference
 import io.github.madeye.meow.preference.RouteModeStore
 import io.github.madeye.meow.repo.ConfigValidator
+import io.github.madeye.meow.repo.DomesticAppClassifier
 import io.github.madeye.meow.repo.InstalledAppsRepository
 import io.github.madeye.meow.repo.PerAppRepository
 import io.github.madeye.meow.repo.ProfileRepository
@@ -42,8 +43,8 @@ import kotlinx.coroutines.SupervisorJob
 /**
  * Hand-written dependency graph.
  *
- * Nine ViewModels over a handful of singletons does not justify Hilt's
- * annotation processing round; this is ~40 lines and reads top to bottom.
+ * A dozen ViewModels over a handful of singletons does not justify Hilt's
+ * annotation processing round; this reads top to bottom.
  */
 object AppGraph {
 
@@ -61,6 +62,7 @@ object AppGraph {
     val trafficHistory: TrafficHistoryRepository by lazy { TrafficHistoryRepository() }
     val perApp: PerAppRepository by lazy { PerAppRepository() }
     val installedApps: InstalledAppsRepository by lazy { InstalledAppsRepository(appContext) }
+    val domesticApps: DomesticAppClassifier by lazy { DomesticAppClassifier(appContext) }
     val configValidator: ConfigValidator by lazy { ConfigValidator() }
     val analytics: Analytics by lazy { Analytics(appContext) }
     val appVersions: AppVersions by lazy { AppVersions(appContext) }
@@ -120,7 +122,7 @@ object AppGraph {
                 )
 
                 PerAppProxyViewModel::class.java ->
-                    PerAppProxyViewModel(perApp, installedApps, analytics)
+                    PerAppProxyViewModel(perApp, installedApps, domesticApps, analytics)
 
                 YamlEditorViewModel::class.java ->
                     YamlEditorViewModel(extras.createSavedStateHandle(), profiles, configValidator, analytics)

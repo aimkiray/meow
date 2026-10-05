@@ -5,6 +5,7 @@ import android.app.Application
 import androidx.core.content.getSystemService
 import io.github.madeye.meow.database.PrivateDatabase
 import io.github.madeye.meow.editor.SoraTextMateBootstrap
+import io.github.madeye.meow.preference.DataStore
 import io.github.madeye.meow.subscription.SubscriptionUpdateWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +23,13 @@ class App : Application() {
         // editor's TextMate registries; doing that work in :vpn just delays the
         // service's startup, which the system watches with a short timeout.
         if (!isMainProcess()) return
+
+        // One-shot legacy cleanup: the pre-4 domestic-app cache could ride
+        // Auto Backup until the user's first domestic scan (the classifier
+        // only purges after a scan); version-4 CACHE_VERSION rejects every
+        // legacy payload, so the key is pure residue. The classifier's own
+        // write-then-clear purge stays as belt-and-braces.
+        DataStore.clearLegacyDomesticCache()
 
         AppGraph.init(this)
         // Ensure database is created on first launch. Off the main thread: it

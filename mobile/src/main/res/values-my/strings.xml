@@ -23,6 +23,7 @@
     <string name="common_retry">ထပ်စမ်းကြည့်ရန်</string>
     <string name="common_discard">ဖယ်ပစ်ရန်</string>
     <string name="common_back">နောက်သို့</string>
+    <string name="common_more_options">နောက်ထပ် ရွေးချယ်မှုများ</string>
     <string name="common_close">ပိတ်ရန်</string>
 
     <!-- Home -->
@@ -211,10 +212,24 @@
     <string name="perapp_mode_bypass">ရွေးထားသည်မှလွဲ</string>
     <string name="perapp_search">အက်ပ်များ ရှာရန်…</string>
     <string name="perapp_show_system">စနစ် အက်ပ်များ ပြရန်</string>
+    <string name="perapp_hide_system">စနစ် အက်ပ်များ ဖျောက်ရန်</string>
     <string name="perapp_select_all">အားလုံး ရွေးရန်</string>
     <string name="perapp_deselect_all">ရွေးချယ်မှု အားလုံး ဖြုတ်ရန်</string>
+    <string name="perapp_select_domestic">တရုတ် အက်ပ်များ ရွေးရန်</string>
+    <string name="perapp_domestic_none">တရုတ် အက်ပ် မတွေ့ပါ</string>
+    <string name="perapp_domestic_already">တရုတ် အက်ပ်အားလုံး ရွေးပြီးသားဖြစ်သည်</string>
+    <string name="perapp_domestic_already_eligible">ရွေးနိုင်သမျှ ရွေးပြီးသားဖြစ်သည်</string>
+    <string name="perapp_domestic_failed">စကင်ဖတ်ခြင်း မပြီးပါ၊ ထပ်စမ်းပါ</string>
+    <string name="perapp_save_failed">အက်ပ်ရွေးချယ်မှု သိမ်းဆည်း၍မရပါ</string>
+    <string name="perapp_status">%1$s၊ %2$s</string>
+    <plurals name="perapp_domestic_added">
+        <item quantity="other">တရုတ် အက်ပ် %1$d ခု ရွေးထားသည်</item>
+    </plurals>
+    <plurals name="perapp_domestic_skipped_uid">
+        <item quantity="other">(ဘုံ UID ရှိ အက်ပ် %1$d ခုကို ကျော်သွားသည်)</item>
+    </plurals>
     <string name="perapp_disabled_hint">အက်ပ် မရွေးထားသရွေ့ အလုပ်မလုပ်ပါ</string>
-    <string name="perapp_restart_required">အပြောင်းအလဲများ အသက်ဝင်ရန် VPN ကို ပြန်ချိတ်ဆက်ပါ</string>
+    <string name="perapp_restart_required">VPN ပြန်ချိတ်ဆက်ပါ</string>
     <plurals name="perapp_selected">
         <item quantity="other">%1$d ခု ရွေးထားသည်</item>
     </plurals>

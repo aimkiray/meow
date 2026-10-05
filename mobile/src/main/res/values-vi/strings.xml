@@ -18,6 +18,7 @@
     <string name="common_retry">Thử lại</string>
     <string name="common_discard">Loại bỏ</string>
     <string name="common_back">Quay lại</string>
+    <string name="common_more_options">Tùy chọn khác</string>
     <string name="common_close">Đóng</string>
 
     <!-- Home -->
@@ -206,10 +207,24 @@
     <string name="perapp_mode_bypass">Trừ mục đã chọn</string>
     <string name="perapp_search">Tìm ứng dụng…</string>
     <string name="perapp_show_system">Hiển thị ứng dụng hệ thống</string>
+    <string name="perapp_hide_system">Ẩn ứng dụng hệ thống</string>
     <string name="perapp_select_all">Chọn tất cả</string>
     <string name="perapp_deselect_all">Bỏ chọn tất cả</string>
+    <string name="perapp_select_domestic">Chọn ứng dụng Trung Quốc</string>
+    <string name="perapp_domestic_none">Không tìm thấy ứng dụng Trung Quốc nào</string>
+    <string name="perapp_domestic_already">Tất cả ứng dụng Trung Quốc đã được chọn</string>
+    <string name="perapp_domestic_already_eligible">Mọi ứng dụng đủ điều kiện đã được chọn</string>
+    <string name="perapp_domestic_failed">Quá trình quét chưa hoàn tất, hãy thử lại</string>
+    <string name="perapp_save_failed">Không thể lưu lựa chọn ứng dụng</string>
+    <string name="perapp_status">%1$s, %2$s</string>
+    <plurals name="perapp_domestic_added">
+        <item quantity="other">Đã chọn %1$d ứng dụng Trung Quốc</item>
+    </plurals>
+    <plurals name="perapp_domestic_skipped_uid">
+        <item quantity="other">(đã bỏ qua %1$d ứng dụng dùng chung UID)</item>
+    </plurals>
     <string name="perapp_disabled_hint">Không có tác dụng khi chưa chọn ứng dụng nào</string>
-    <string name="perapp_restart_required">Kết nối lại VPN để áp dụng thay đổi</string>
+    <string name="perapp_restart_required">kết nối lại VPN</string>
     <plurals name="perapp_selected">
         <item quantity="other">Đã chọn %1$d</item>
     </plurals>
