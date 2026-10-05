@@ -40,6 +40,11 @@ class StringsParityTest {
         }
     }
 
+    /** Every parsed file: each res dir's `values/` plus every translation. */
+    private val allResources: List<Pair<String, Resources>> =
+        catalogs.map { "${it.label.substringBeforeLast('/')}/values" to it.english }.distinct() +
+            catalogs.map { it.label to it.translated }
+
     @Test
     fun `every locale defines the same string keys`() {
         val drift = catalogs.associate { catalog ->
@@ -55,11 +60,22 @@ class StringsParityTest {
     fun `every locale defines the same plurals`() {
         val drift = catalogs.associate { catalog ->
             catalog.label to Drift(
-                missing = catalog.english.plurals - catalog.translated.plurals,
-                extra = catalog.translated.plurals - catalog.english.plurals,
+                missing = catalog.english.plurals.keys - catalog.translated.plurals.keys,
+                extra = catalog.translated.plurals.keys - catalog.english.plurals.keys,
             )
         }.filterValues { !it.isEmpty() }
         assertEquals("plurals out of sync with values/", emptyMap<String, Drift>(), drift)
+    }
+
+    @Test
+    fun `every plurals defines an other item`() {
+        // Quantity sets legitimately differ by locale (CLDR), but Android
+        // resolves an unmatched count through "other" — without it the
+        // lookup throws Resources.NotFoundException.
+        val missing = allResources.flatMap { (label, resources) ->
+            resources.plurals.filterValues { "other" !in it }.keys.map { "$label: $it" }
+        }
+        assertEquals("plurals without the required \"other\" item", emptyList<String>(), missing)
     }
 
     @Test
@@ -68,6 +84,16 @@ class StringsParityTest {
             catalog.translated.strings.filterValues { it.isBlank() }.keys.map { "${catalog.label}: $it" }
         }
         assertEquals("blank translations", emptyList<String>(), blank)
+    }
+
+    @Test
+    fun `no plurals item is blank`() {
+        val blank = allResources.flatMap { (label, resources) ->
+            resources.plurals.flatMap { (name, items) ->
+                items.filterValues { it.isBlank() }.keys.map { "$label: $name[$it]" }
+            }
+        }
+        assertEquals("blank plurals items", emptyList<String>(), blank)
     }
 
     @Test
@@ -81,15 +107,39 @@ class StringsParityTest {
     }
 
     @Test
+    fun `plurals items keep the default locale's format arguments`() {
+        // Call sites pass the same arguments whatever the count, so an item
+        // may use at most the specifiers values/ uses for that plurals. Using
+        // fewer is legal — ar spells "one" out instead of printing the
+        // digit — while naming an argument values/ never passes would crash
+        // String.format at runtime.
+        val mismatched = catalogs.flatMap { catalog ->
+            catalog.translated.plurals.keys.intersect(catalog.english.plurals.keys).flatMap { name ->
+                val allowed = catalog.english.plurals.getValue(name).values.flatMap(::specifiers).toSet()
+                catalog.translated.plurals.getValue(name).filterValues { item ->
+                    !allowed.containsAll(specifiers(item))
+                }.keys.map { "${catalog.label}: $name[$it]" }
+            }
+        }
+        assertEquals(
+            "plurals items using format arguments values/ does not provide",
+            emptyList<String>(),
+            mismatched,
+        )
+    }
+
+    @Test
     fun `multi-argument strings use positional specifiers`() {
         // Bare %s cannot be reordered by a translator, and Android throws if a
         // resource mixes positional and non-positional forms.
-        val all = catalogs.map { it.english }.distinct() + catalogs.map { it.translated }
-        val offenders = all.flatMap { resources ->
-            resources.strings.filterValues { value ->
+        val offenders = allResources.flatMap { (label, resources) ->
+            (resources.strings.map { (key, value) -> "$label: $key" to value } +
+                resources.plurals.flatMap { (name, items) ->
+                    items.map { (quantity, value) -> "$label: $name[$quantity]" to value }
+                }).filter { (_, value) ->
                 val bare = Regex("%[sd]").findAll(value).count()
                 bare > 0 && specifiers(value).isNotEmpty()
-            }.keys
+            }.map { it.first }
         }
         assertTrue("mixed positional and bare specifiers in $offenders", offenders.isEmpty())
     }
@@ -156,14 +206,25 @@ class StringsParityTest {
             }
         }
         val plurals = document.getElementsByTagName("plurals").let { nodes ->
-            (0 until nodes.length).map { index ->
-                (nodes.item(index) as Element).getAttribute("name")
-            }.toSet()
+            (0 until nodes.length).associate { index ->
+                val element = nodes.item(index) as Element
+                val items = element.getElementsByTagName("item").let { itemNodes ->
+                    (0 until itemNodes.length).associate { itemIndex ->
+                        val item = itemNodes.item(itemIndex) as Element
+                        item.getAttribute("quantity") to item.textContent
+                    }
+                }
+                element.getAttribute("name") to items
+            }
         }
         return Resources(strings, plurals)
     }
 
-    private data class Resources(val strings: Map<String, String>, val plurals: Set<String>)
+    private data class Resources(
+        val strings: Map<String, String>,
+        // plurals name -> quantity -> item text
+        val plurals: Map<String, Map<String, String>>,
+    )
 
     private class Catalog(
         val label: String,

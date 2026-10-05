@@ -18,6 +18,7 @@
     <string name="common_retry">重试</string>
     <string name="common_discard">放弃</string>
     <string name="common_back">返回</string>
+    <string name="common_more_options">更多选项</string>
     <string name="common_close">关闭</string>
 
     <!-- Home -->
@@ -206,10 +207,13 @@
     <string name="perapp_mode_bypass">绕过选中</string>
     <string name="perapp_search">搜索应用…</string>
     <string name="perapp_show_system">显示系统应用</string>
+    <string name="perapp_hide_system">隐藏系统应用</string>
     <string name="perapp_select_all">全选</string>
     <string name="perapp_deselect_all">取消全选</string>
+    <string name="perapp_save_failed">无法保存应用选择</string>
+    <string name="perapp_status">%1$s，%2$s</string>
     <string name="perapp_disabled_hint">未选择应用时不生效</string>
-    <string name="perapp_restart_required">重新连接 VPN 以应用更改</string>
+    <string name="perapp_restart_required">重连 VPN 后生效</string>
     <plurals name="perapp_selected">
         <item quantity="other">已选 %1$d 个</item>
     </plurals>

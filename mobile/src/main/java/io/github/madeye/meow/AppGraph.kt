@@ -42,8 +42,8 @@ import kotlinx.coroutines.SupervisorJob
 /**
  * Hand-written dependency graph.
  *
- * Nine ViewModels over a handful of singletons does not justify Hilt's
- * annotation processing round; this is ~40 lines and reads top to bottom.
+ * A dozen ViewModels over a handful of singletons does not justify Hilt's
+ * annotation processing round; this reads top to bottom.
  */
 object AppGraph {
 

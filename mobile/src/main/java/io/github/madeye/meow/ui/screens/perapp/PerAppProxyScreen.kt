@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -28,9 +27,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -49,7 +46,6 @@ fun PerAppProxyScreen(
     state: PerAppUiState,
     contentPadding: PaddingValues,
     onQueryChange: (String) -> Unit,
-    onToggleSystemApps: () -> Unit,
     onModeChange: (PerAppMode) -> Unit,
     onToggleApp: (String) -> Unit,
     iconLoader: suspend (String) -> android.graphics.drawable.Drawable?,
@@ -94,14 +90,20 @@ fun PerAppProxyScreen(
                 text = if (state.selected.isEmpty()) {
                     stringResource(R.string.perapp_disabled_hint)
                 } else {
-                    pluralStringResource(
-                        R.plurals.perapp_selected,
-                        state.selected.size,
-                        state.selected.size,
-                    ) + " · " + stringResource(R.string.perapp_restart_required)
+                    stringResource(
+                        R.string.perapp_status,
+                        pluralStringResource(
+                            R.plurals.perapp_selected,
+                            state.selected.size,
+                            state.selected.size,
+                        ),
+                        stringResource(R.string.perapp_restart_required),
+                    )
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.meow.mutedText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
 
             Spacer(Modifier.height(8.dp))
@@ -111,13 +113,6 @@ fun PerAppProxyScreen(
                 placeholder = { Text(stringResource(R.string.perapp_search)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(Modifier.height(8.dp))
-            FilterChip(
-                selected = state.showSystemApps,
-                onClick = onToggleSystemApps,
-                label = { Text(stringResource(R.string.perapp_show_system)) },
             )
         }
 

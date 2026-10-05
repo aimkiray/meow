@@ -26,6 +26,17 @@ object DataStore {
         get() = prefs.getString("perAppPackages", "[]") ?: "[]"
         set(value) = prefs.edit().putString("perAppPackages", value).apply()
 
+    /**
+     * Synchronous variant of the two per-app setters above. Only the save
+     * fallback path in `PerAppRepository` may use it: there the prefs copy
+     * is the ONLY place the selection landed (the file write already
+     * failed), so the caller must know whether it actually reached disk.
+     * `apply()` never reports failures — `commit()` does, synchronously.
+     * Every other writer keeps the async setters.
+     */
+    fun commitPerApp(mode: String, packagesJson: String): Boolean =
+        prefs.edit().putString("perAppMode", mode).putString("perAppPackages", packagesJson).commit()
+
     /** The UI asks for POST_NOTIFICATIONS once, ever; see `rememberNotificationPermissionRequest`. */
     var notificationPermissionAsked: Boolean
         get() = prefs.getBoolean("notificationPermissionAsked", false)
