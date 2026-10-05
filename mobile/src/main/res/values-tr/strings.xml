@@ -18,6 +18,7 @@
     <string name="common_retry">Tekrar dene</string>
     <string name="common_discard">Sil</string>
     <string name="common_back">Geri</string>
+    <string name="common_more_options">Diğer seçenekler</string>
     <string name="common_close">Kapat</string>
 
     <!-- Home -->
@@ -224,10 +225,13 @@
     <string name="perapp_mode_bypass">Seçililer hariç</string>
     <string name="perapp_search">Uygulama ara…</string>
     <string name="perapp_show_system">Sistem uygulamalarını göster</string>
+    <string name="perapp_hide_system">Sistem uygulamalarını gizle</string>
     <string name="perapp_select_all">Tümünü seç</string>
     <string name="perapp_deselect_all">Tüm seçimleri kaldır</string>
+    <string name="perapp_save_failed">Uygulama seçimi kaydedilemedi</string>
+    <string name="perapp_status">%1$s, %2$s</string>
     <string name="perapp_disabled_hint">Uygulama seçilmediği sürece devre dışı</string>
-    <string name="perapp_restart_required">Değişiklikleri uygulamak için VPN bağlantısını yeniden kurun</string>
+    <string name="perapp_restart_required">VPN\'i yeniden bağlayın</string>
     <plurals name="perapp_selected">
         <item quantity="one">%1$d seçili</item>
         <item quantity="other">%1$d seçili</item>

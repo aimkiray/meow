@@ -21,15 +21,21 @@ class RouteModeStore(private val file: File) {
     fun load(): RouteMode? =
         try {
             RouteMode.fromWire(file.readText())
-        } catch (_: IOException) {
+        } catch (_: Exception) {
+            // IOException for a missing/gone file; the wide catch keeps an
+            // undeclared RuntimeException from aborting MeowInstance.start
+            // in :vpn — a lost mode just follows the profile's default.
             null
         }
 
     fun save(mode: RouteMode) {
-        // Write-then-rename so a concurrent load never sees a torn value.
         val tmp = File(file.path + ".tmp")
-        tmp.writeText(mode.wire)
-        if (!tmp.renameTo(file)) throw IOException("cannot replace $file")
+        try {
+            tmp.writeText(mode.wire)
+            if (!tmp.renameTo(file)) throw IOException("cannot replace $file")
+        } finally {
+            tmp.delete()
+        }
     }
 
     companion object {

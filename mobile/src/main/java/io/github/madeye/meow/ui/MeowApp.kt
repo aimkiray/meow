@@ -52,7 +52,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import io.github.madeye.meow.AppGraph
 import io.github.madeye.meow.BuildConfig
 import io.github.madeye.meow.R
@@ -235,7 +234,9 @@ private fun MeowNavHost(
                 onBack = navController::popBackStack,
             )
         }
-        composable<Dest.PerAppProxy> { PerAppProxyRoute(onBack = navController::popBackStack) }
+        composable<Dest.PerAppProxy> {
+            PerAppProxyRoute(snackbarHost = snackbarHost, onBack = navController::popBackStack)
+        }
         composable<Dest.YamlEditor> { entry ->
             YamlEditorRoute(
                 snackbarHost = snackbarHost,
@@ -705,10 +706,20 @@ private fun SettingsRoute(
 }
 
 @Composable
-private fun PerAppProxyRoute(onBack: () -> Unit) {
+private fun PerAppProxyRoute(snackbarHost: SnackbarHostState, onBack: () -> Unit) {
     val viewModel: PerAppProxyViewModel = viewModel(factory = AppGraph.viewModelFactory)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
+
+    val saveFailed = stringResource(R.string.perapp_save_failed)
+    LaunchedEffect(viewModel, saveFailed) {
+        viewModel.events.collect { event ->
+            val message = when (event) {
+                is PerAppProxyViewModel.PerAppEvent.SaveFailed -> saveFailed
+            }
+            snackbarHost.showSnackbar(message)
+        }
+    }
 
     MeowScaffold(
         title = stringResource(R.string.perapp_title),
@@ -716,28 +727,74 @@ private fun PerAppProxyRoute(onBack: () -> Unit) {
         actions = {
             Box {
                 IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = null)
+                    Icon(
+                        Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.common_more_options),
+                    )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    // Both act on the filtered list, so "select all" during a
-                    // search means "all of these", not "all installed apps".
+                    // The action acts on the filtered list, so during a search
+                    // it means "all of these". One item serves both directions
+                    // — partial selection counts as "not all" so tapping
+                    // completes the set. Select skips system apps (its job is
+                    // "all third-party apps"), so the predicate and the gate
+                    // track the selectable subset; deselect still clears
+                    // visible system picks.
+                    val visible = state.visibleApps
+                    val selectable = visible.filter { !it.isSystem }
+                    val allSelectableSelected = selectable.isNotEmpty() &&
+                        selectable.all { it.packageName in state.selected }
+                    // Edge case: a filter showing only manually-selected
+                    // system apps — nothing selectable, but deselect still
+                    // has real work to do.
+                    val deselectOnlySystem = selectable.isEmpty() &&
+                        visible.isNotEmpty() &&
+                        visible.all { it.packageName in state.selected }
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.perapp_select_all)) },
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (allSelectableSelected || deselectOnlySystem) {
+                                        R.string.perapp_deselect_all
+                                    } else {
+                                        R.string.perapp_select_all
+                                    },
+                                ),
+                            )
+                        },
+                        // No-op without a gate during loading / empty search /
+                        // a filter that shows only unselected system apps.
+                        enabled = selectable.isNotEmpty() || deselectOnlySystem,
                         onClick = {
                             menuOpen = false
-                            viewModel.onSelectAllVisible(state.visibleApps)
+                            if (allSelectableSelected || deselectOnlySystem) {
+                                viewModel.onDeselectAllVisible(visible)
+                            } else {
+                                viewModel.onSelectAllVisible(visible)
+                            }
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.perapp_deselect_all)) },
-                        onClick = {
-                            menuOpen = false
-                            viewModel.onDeselectAllVisible(state.visibleApps)
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (state.showSystemApps) {
+                                        R.string.perapp_hide_system
+                                    } else {
+                                        R.string.perapp_show_system
+                                    },
+                                ),
+                            )
                         },
+                        // Toggle stays open so the flipped label is visible.
+                        onClick = viewModel::onToggleSystemApps,
                     )
                 }
             }
-            IconButton(onClick = { viewModel.save(onBack) }) {
+            IconButton(
+                onClick = { viewModel.save(onBack) },
+                enabled = !state.loading,
+            ) {
                 Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_save))
             }
         },
@@ -746,12 +803,12 @@ private fun PerAppProxyRoute(onBack: () -> Unit) {
             state = state,
             contentPadding = padding,
             onQueryChange = viewModel::onQueryChange,
-            onToggleSystemApps = viewModel::onToggleSystemApps,
             onModeChange = viewModel::onModeChange,
             onToggleApp = viewModel::onToggleApp,
             iconLoader = viewModel::icon,
         )
     }
+    SnackbarHost(snackbarHost)
 }
 
 /**

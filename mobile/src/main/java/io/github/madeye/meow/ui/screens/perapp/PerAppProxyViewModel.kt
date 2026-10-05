@@ -10,12 +10,17 @@ import io.github.madeye.meow.repo.InstalledAppsRepository
 import io.github.madeye.meow.repo.PerAppConfig
 import io.github.madeye.meow.repo.PerAppMode
 import io.github.madeye.meow.repo.PerAppRepository
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 @Immutable
 data class PerAppUiState(
@@ -26,7 +31,7 @@ data class PerAppUiState(
     val showSystemApps: Boolean = false,
     val apps: List<InstalledApp> = emptyList(),
 ) {
-    /** Filtering happens here so the list and "select all" always agree. */
+    /** Filtering happens here so the list and the list-scoped bulk actions share one scope. */
     val visibleApps: List<InstalledApp>
         get() = apps.filter { app ->
             (showSystemApps || !app.isSystem || app.packageName in selected) &&
@@ -49,6 +54,16 @@ class PerAppProxyViewModel(
     private val loading = MutableStateFlow(true)
     private val query = MutableStateFlow("")
     private val showSystem = MutableStateFlow(false)
+    private var saving = false
+
+    /** One-shot outcomes for the route to snackbar. */
+    sealed interface PerAppEvent {
+        /** The persist threw; the route stays open so the user can retry. */
+        data object SaveFailed : PerAppEvent
+    }
+
+    private val _events = MutableSharedFlow<PerAppEvent>(extraBufferCapacity = 4)
+    val events: SharedFlow<PerAppEvent> = _events.asSharedFlow()
 
     private val iconCache = mutableMapOf<String, Drawable?>()
 
@@ -71,9 +86,31 @@ class PerAppProxyViewModel(
 
     init {
         viewModelScope.launch {
-            config.value = perApp.load()
-            apps.value = installedApps.load()
-            loading.value = false
+            try {
+                config.value = perApp.load()
+                apps.value = installedApps.load()
+                // Packages uninstalled since the last save have no row to
+                // toggle and deselect-all can't reach them — prune so they
+                // don't inflate the count; the cleaned set lands on the next
+                // save. The baseline is every package PM knows, not the
+                // picker list: disabled and archived apps are transient, not
+                // uninstalled. An empty baseline means the enumeration
+                // failed, not that everything vanished.
+                val installed = installedApps.installedPackageNames()
+                if (installed.isNotEmpty()) {
+                    config.value = config.value.copy(
+                        packages = config.value.packages intersect installed,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Whatever survives shows as an empty picker; the alternative
+                // is an uncaught-coroutine crash on the main thread.
+                Timber.w(e, "per-app init failed")
+            } finally {
+                loading.value = false
+            }
         }
     }
 
@@ -87,29 +124,66 @@ class PerAppProxyViewModel(
 
     fun onToggleApp(packageName: String) {
         val current = config.value.packages
+        val removing = packageName in current
         config.value = config.value.copy(
-            packages = if (packageName in current) current - packageName else current + packageName,
+            packages = if (removing) current - packageName else current + packageName,
         )
     }
 
-    /** Applies to the currently filtered list only, matching the old behaviour. */
+    /**
+     * Applies to the currently filtered list only — and stays third-party:
+     * "select all" means "every user app", so system apps keep their
+     * per-row opt-in here.
+     */
     fun onSelectAllVisible(visible: List<InstalledApp>) {
+        val adding = visible.filter { !it.isSystem }.map { it.packageName }
         config.value = config.value.copy(
-            packages = config.value.packages + visible.map { it.packageName },
+            packages = config.value.packages + adding,
         )
     }
 
     fun onDeselectAllVisible(visible: List<InstalledApp>) {
+        val removing = visible.map { it.packageName }.toSet()
         config.value = config.value.copy(
-            packages = config.value.packages - visible.map { it.packageName }.toSet(),
+            packages = config.value.packages - removing,
         )
     }
 
     fun save(onSaved: () -> Unit) {
+        // Checked synchronously: two taps within a frame would otherwise launch
+        // two coroutines, both finishing with onSaved() → double popBackStack.
+        if (saving) return
+        saving = true
         viewModelScope.launch {
-            perApp.save(config.value)
-            analytics.perAppProxySave(config.value.mode.key)
-            onSaved()
+            try {
+                perApp.save(config.value)
+                // Analytics is telemetry, not part of the persist: by the time
+                // it runs the selection is already durable, so a failure here
+                // must NOT surface as "save failed". Keep the order persist →
+                // analytics → onSaved() so analytics still completes before
+                // onSaved() pops the route and the ViewModel is destroyed.
+                runCatching { analytics.perAppProxySave(config.value.mode.key) }
+                    .onFailure {
+                        // runCatching swallows Throwable, which includes the
+                        // CancellationException structured cancellation relies
+                        // on — rethrow it so cancellation stays observable.
+                        // The analytics call is non-suspend today; this guard
+                        // is for if that ever changes.
+                        if (it is CancellationException) throw it
+                        Timber.w(it, "per-app save analytics failed")
+                    }
+                onSaved()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "per-app save failed")
+                // Without this the ✓ looks dead: onSaved is skipped, so the
+                // route stays open and nothing tells the user why. SaveFailed
+                // means the authoritative config file could not be replaced.
+                _events.tryEmit(PerAppEvent.SaveFailed)
+            } finally {
+                saving = false
+            }
         }
     }
 

@@ -11,8 +11,6 @@ on:
     branches: [master, main]
   pull_request:
     branches: [master, main]
-    paths:
-      - .github/workflows/apk.yml
   workflow_dispatch:
 
 concurrency:

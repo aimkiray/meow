@@ -26,6 +26,7 @@
     <string name="common_retry">تلاش دوباره</string>
     <string name="common_discard">حذف تغییرات</string>
     <string name="common_back">بازگشت</string>
+    <string name="common_more_options">گزینه‌های بیشتر</string>
     <string name="common_close">بستن</string>
 
     <!-- Home -->
@@ -232,10 +233,13 @@
     <string name="perapp_mode_bypass">به‌جز انتخاب‌شده‌ها</string>
     <string name="perapp_search">جستجوی برنامه‌ها…</string>
     <string name="perapp_show_system">نمایش برنامه‌های سیستمی</string>
+    <string name="perapp_hide_system">پنهان‌کردن برنامه‌های سیستمی</string>
     <string name="perapp_select_all">انتخاب همه</string>
     <string name="perapp_deselect_all">لغو انتخاب همه</string>
+    <string name="perapp_save_failed">ذخیره انتخاب برنامه‌ها ممکن نشد</string>
+    <string name="perapp_status">\u2068%1$s\u2069 — \u2068%2$s\u2069</string>
     <string name="perapp_disabled_hint">تا وقتی برنامه‌ای انتخاب نشده، غیرفعال است</string>
-    <string name="perapp_restart_required">برای اعمال تغییرات، VPN را دوباره وصل کنید</string>
+    <string name="perapp_restart_required">اتصال مجدد VPN لازم است</string>
     <plurals name="perapp_selected">
         <item quantity="one">%1$d برنامه انتخاب شده</item>
         <item quantity="other">%1$d برنامه انتخاب شده</item>

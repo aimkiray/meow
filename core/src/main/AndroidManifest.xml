@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
@@ -16,11 +17,16 @@
         <!-- systemExempted is the foreground-service type Android 14+ lists for
              VPN apps (granted while the user's VPN consent stands); specialUse
              would need a free-form Play Console justification instead. -->
+        <!-- ForegroundServicePermission is a false positive here: lint's
+             systemExempted table only credits SCHEDULE_/USE_EXACT_ALARM and
+             cannot model AppOpsManager.OP_ACTIVATE_VPN, the app-op VPN
+             consent grants — hence tools:ignore on the service below. -->
         <service
             android:name="io.github.madeye.meow.bg.VpnService"
             android:exported="false"
             android:foregroundServiceType="systemExempted"
             android:process=":vpn"
+            tools:ignore="ForegroundServicePermission"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="android.net.VpnService" />

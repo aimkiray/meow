@@ -10,9 +10,11 @@ import androidx.core.content.ContextCompat
 import io.github.madeye.meow.Core
 import io.github.madeye.meow.net.DefaultNetworkListener
 import io.github.madeye.meow.preference.DataStore
-import org.json.JSONArray
+import io.github.madeye.meow.preference.PerAppConfigStore
+import io.github.madeye.meow.repo.PerAppMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import timber.log.Timber
 import java.io.File
 import android.net.VpnService as BaseVpnService
@@ -100,12 +102,19 @@ class VpnService : BaseVpnService(), BaseService.Interface {
             .addRoute("0.0.0.0", 0)
             .addRoute("::", 0)
 
-        // Per-app VPN routing
-        val perAppPackages: Set<String> = try {
+        // Per-app VPN routing — the file store is authoritative: this process
+        // caches SharedPreferences for its whole lifetime, so edits saved
+        // after the first establish would never reach the next one. A file
+        // holding a mode this build does not know is treated like a missing
+        // one: the prefs keys are written alongside every save and stand in.
+        val perApp = PerAppConfigStore.default.load()
+            ?.takeIf { PerAppMode.from(it.mode) != null }
+        val perAppPackages: Set<String> = perApp?.packages ?: try {
             JSONArray(DataStore.perAppPackages).let { arr ->
                 (0 until arr.length()).map { arr.getString(it) }.toSet()
             }
         } catch (_: Exception) { emptySet() }
+        val perAppMode = perApp?.mode ?: DataStore.perAppMode
 
         // Note: we deliberately do NOT add the meow package to
         // `addDisallowedApplication` here. The engine and tun2socks run in
@@ -115,21 +124,28 @@ class VpnService : BaseVpnService(), BaseService.Interface {
         // the whole app's uid would also exempt traffic users may want to
         // intercept (e.g. a built-in browser preview) and would shadow the
         // protect path the rest of the stack is designed around.
-        if (perAppPackages.isNotEmpty()) when (DataStore.perAppMode) {
-            "proxy" -> {
+        if (perAppPackages.isNotEmpty()) when (PerAppMode.from(perAppMode)) {
+            PerAppMode.Bypass -> {
+                // All apps except selected go through VPN.
+                for (pkg in perAppPackages) {
+                    try { builder.addDisallowedApplication(pkg) }
+                    // Vanished packages plus OEM RuntimeExceptions — one bad
+                    // entry must not abort the whole establish.
+                    catch (_: Exception) { }
+                }
+            }
+            PerAppMode.Proxy -> {
                 // Only selected apps go through VPN.
                 for (pkg in perAppPackages) {
                     try { builder.addAllowedApplication(pkg) }
-                    catch (_: PackageManager.NameNotFoundException) { }
+                    catch (_: Exception) { }
                 }
             }
-            else -> {
-                // "bypass" — all apps except selected go through VPN.
-                for (pkg in perAppPackages) {
-                    try { builder.addDisallowedApplication(pkg) }
-                    catch (_: PackageManager.NameNotFoundException) { }
-                }
-            }
+            null ->
+                // Only reachable when the legacy prefs key itself is unknown
+                // (the file path is filtered above). Apply no per-app routing
+                // rather than guess: the tunnel covers everything.
+                Timber.w("VpnService: unknown per-app mode '$perAppMode'; routing all apps")
         }
 
         active = true

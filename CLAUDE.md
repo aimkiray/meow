@@ -18,12 +18,19 @@ export JAVA_HOME=/path/to/jdk17
 # Clean (includes cargo clean)
 ./gradlew clean
 
-# E2E test (requires ssserver, Android emulator, adb)
-# Configurable via: EMULATOR, ADB, AVD, APK, SSSERVER, SKIP_EMULATOR_BOOT
+# E2E test (requires ssserver, Android emulator or device, adb)
+# Env vars: EMULATOR, ADB, AVD, APK, SSSERVER, PKG, MAIN_ACTIVITY,
+#   SS_HOST_FROM_EMU, SUB_PORT, SKIP_EMULATOR_BOOT, TUN_WAIT_SECS
 ./test-e2e.sh
 
 # Run with existing emulator
 SKIP_EMULATOR_BOOT=true ./test-e2e.sh
+
+# Run on a physical device on the same LAN — SS_HOST_FROM_EMU is how the
+# device reaches the host's ssserver/sub server (10.0.2.2 = emulator NAT
+# default, host's LAN IP on a physical device). ANDROID_SERIAL selects the
+# device when several are attached.
+SKIP_EMULATOR_BOOT=true SS_HOST_FROM_EMU=<host-LAN-IP> ./test-e2e.sh
 ```
 
 **JDK 17 is required** — JDK 25 breaks Kotlin compiler. Set `JAVA_HOME` explicitly.
@@ -171,4 +178,4 @@ meow-rs crates are pinned by git **tag** in `Cargo.toml` — bumping the engine 
 
 ## E2E Test Structure
 
-`test-e2e.sh` runs 5 tests: tun0 exists, DNS resolution, TCP 1.1.1.1:80, TCP 8.8.8.8:443, HTTP curl to Google generate_204. Uses `ssserver` on host (plain SS, no plugin), pushes a static `curl-aarch64` binary, injects Room database via sqlite3 + `run-as`, triggers VPN via `am start --ez auto_connect true`, accepts VPN consent dialog via uiautomator.
+`test-e2e.sh` runs 5 tests: tun0 exists, DNS resolution, TCP 1.1.1.1:80, TCP 8.8.8.8:443, HTTP GET to Google generate_204. Uses `ssserver` on host (plain SS, no plugin) plus `python3 -m http.server` on `$SUB_PORT` serving the subscription config; on-device probes use Android's built-in `nc`/`ping` — no external binaries are pushed. Injects the Room database via sqlite3 + `run-as` (under the legacy `mihomo.db` name, doubling as the mihomo→meow migration test), triggers VPN via `am start --ez auto_connect true`, accepts VPN consent dialog via uiautomator. `TUN_WAIT_SECS` bounds the tun0 wait (default 60s).
