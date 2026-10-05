@@ -21,15 +21,36 @@ class RouteModeStore(private val file: File) {
     fun load(): RouteMode? =
         try {
             RouteMode.fromWire(file.readText())
-        } catch (_: IOException) {
+        } catch (_: Exception) {
+            // IOException for a missing/gone file; the wide catch keeps an
+            // undeclared RuntimeException from aborting MeowInstance.start
+            // in :vpn — a lost mode just follows the profile's default.
             null
         }
 
     fun save(mode: RouteMode) {
         // Write-then-rename so a concurrent load never sees a torn value.
+        // File.renameTo, not Files.move: java.nio.file only exists at API 26+
+        // (the default desugar_jdk_libs flavor doesn't cover it — that's the
+        // _nio variant), while renameTo lowers to rename(2) — already an
+        // atomic replace for a same-directory move. copyTo is the fallback
+        // for a filesystem that refuses the rename.
         val tmp = File(file.path + ".tmp")
         tmp.writeText(mode.wire)
-        if (!tmp.renameTo(file)) throw IOException("cannot replace $file")
+        if (!tmp.renameTo(file)) {
+            try {
+                tmp.copyTo(file, overwrite = true)
+            } catch (e: Exception) {
+                // copyTo's declared failures are already IOExceptions
+                // (kotlin.io.FileSystemException extends IOException); the
+                // wide catch folds in undeclared RuntimeExceptions so every
+                // failure surfaces as write-failed to IOException-catching
+                // callers.
+                throw IOException("copy fallback failed", e)
+            } finally {
+                tmp.delete()
+            }
+        }
     }
 
     companion object {
