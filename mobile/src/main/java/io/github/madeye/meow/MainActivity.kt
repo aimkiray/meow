@@ -3,8 +3,11 @@ package io.github.madeye.meow
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
@@ -45,22 +48,26 @@ class MainActivity : ComponentActivity() {
     /** Raw install-config link awaiting the user's answer; cleared once answered. */
     private var pendingLink by mutableStateOf<String?>(null)
 
-    /** Settings' theme pick this instance was created with. */
-    private lateinit var themeMode: ThemeMode
+    /** The system's night bits, read before [applyThemeMode] overrides them. */
+    private var systemNight = Configuration.UI_MODE_NIGHT_NO
+
+    /** Whether the UI draws dark: Settings' pick, else the system's mode. */
+    private var dark by mutableStateOf(false)
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(newBase)
-        themeMode = applyThemeMode()
+        systemNight = newBase.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        applyThemeMode()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        applyPick(AppGraph.themeMode.mode.value)
 
-        // A new pick in Settings: only a new instance can apply it.
-        scope.launch {
-            AppGraph.themeMode.mode.collect { if (it != themeMode) recreate() }
-        }
+        // A pick made in Settings applies in place. recreate() would keep this
+        // window, and on Android 15 the kept window came back fitted inside
+        // the system bars: opaque bars, content no longer drawn behind them.
+        scope.launch { AppGraph.themeMode.mode.collect(::applyPick) }
 
         AppGraph.vpn.bind(this)
 
@@ -93,7 +100,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val link = pendingLink
             val installLink = remember(link) { link?.let(InstallConfigLink::parse) }
-            MeowTheme {
+            MeowTheme(darkTheme = dark) {
                 MeowApp(
                     autoConnect = autoConnect,
                     installLink = installLink,
@@ -101,6 +108,16 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    private fun applyPick(mode: ThemeMode) {
+        dark = (mode.nightMode ?: systemNight) == Configuration.UI_MODE_NIGHT_YES
+        // enableEdgeToEdge's default styles, but dark when the pick is: the
+        // configuration only agrees with the pick this instance started with.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark },
+            navigationBarStyle = SystemBarStyle.auto(LIGHT_SCRIM, DARK_SCRIM) { dark },
+        )
     }
 
     // singleTask: a link tapped while the app is alive arrives here. auto_connect
@@ -136,5 +153,9 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val KEY_PENDING_LINK = "pending_install_link"
+
+        /** enableEdgeToEdge's navigation bar scrims; only drawn before API 29. */
+        val LIGHT_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val DARK_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
     }
 }
