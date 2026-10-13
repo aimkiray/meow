@@ -3,6 +3,7 @@ package io.github.madeye.meow.ui.screens.proxies
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,22 +15,28 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -42,7 +49,11 @@ import io.github.madeye.meow.ui.components.DelayBadge
 import io.github.madeye.meow.ui.components.GlassCard
 import io.github.madeye.meow.ui.theme.meow
 
-/** The Proxy Groups tab, after meow-ios's: one expandable card per group. */
+/**
+ * The Proxy Groups tab, after meow-ios's: one expandable card per group. A
+ * tap on a node selects it; a long press opens its detail page
+ * ([onOpenNode], with the group's test URL).
+ */
 @Composable
 fun ProxyGroupsScreen(
     state: ProxyGroupsUiState,
@@ -50,6 +61,7 @@ fun ProxyGroupsScreen(
     onToggleExpanded: (String) -> Unit,
     onSelectNode: (String, String) -> Unit,
     onTestGroup: (String) -> Unit,
+    onOpenNode: (node: String, testUrl: String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -73,11 +85,49 @@ fun ProxyGroupsScreen(
                     expanded = state.expandedGroup == group.name,
                     onToggleExpanded = { onToggleExpanded(group.name) },
                     onSelectNode = { node -> onSelectNode(group.name, node) },
+                    onOpenNode = { node -> onOpenNode(node, group.testUrl) },
                     onTest = { onTestGroup(group.name) },
                 )
             }
         }
     }
+}
+
+/**
+ * The tab's info button: a long press is not something anyone finds by
+ * looking, so this says what a node row answers to and what its detail page
+ * offers (the page's own row titles, so the two never drift).
+ */
+@Composable
+fun ProxyGroupsTipsDialog(onDismiss: () -> Unit) {
+    val details = listOf(R.string.proxy_detail_type, R.string.proxy_detail_udp) + ProxyProbe.entries.map { it.title }
+    val body = MaterialTheme.typography.bodyMedium
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.proxy_groups_tips)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()).testTag("proxy_groups_tips_dialog"),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(stringResource(R.string.proxy_groups_tips_tap), style = body)
+                Spacer(Modifier.size(4.dp))
+                Text(stringResource(R.string.proxy_groups_tips_long_press), style = body)
+                details.forEach { label ->
+                    Text("•  ${stringResource(label)}", style = body, modifier = Modifier.padding(start = 8.dp))
+                }
+                Spacer(Modifier.size(4.dp))
+                Text(
+                    text = stringResource(R.string.proxy_groups_tips_connect),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.meow.mutedText,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
+        },
+    )
 }
 
 /** Why there are no groups to show; the VPN switch itself lives on Home. */
@@ -106,6 +156,7 @@ private fun ProxyGroupCard(
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
     onSelectNode: (String) -> Unit,
+    onOpenNode: (String) -> Unit,
     onTest: () -> Unit,
 ) {
     val colors = MaterialTheme.meow
@@ -167,7 +218,11 @@ private fun ProxyGroupCard(
             Column {
                 HorizontalDivider(color = colors.border)
                 group.nodes.forEach { node ->
-                    ProxyNodeRow(node = node, onClick = { onSelectNode(node.name) })
+                    ProxyNodeRow(
+                        node = node,
+                        onClick = { onSelectNode(node.name) },
+                        onLongClick = { onOpenNode(node.name) },
+                    )
                 }
             }
         }
@@ -175,12 +230,20 @@ private fun ProxyGroupCard(
 }
 
 @Composable
-private fun ProxyNodeRow(node: ProxyNodeUi, onClick: () -> Unit) {
+private fun ProxyNodeRow(node: ProxyNodeUi, onClick: () -> Unit, onLongClick: () -> Unit) {
     val colors = MaterialTheme.meow
+    val haptics = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClickLabel = stringResource(R.string.proxy_node_details),
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
+            )
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
