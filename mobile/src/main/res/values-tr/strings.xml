@@ -29,6 +29,7 @@
     <string name="home_disconnected">Bağlantı kesildi</string>
     <string name="home_reconnecting_profile">Güncellenen profille yeniden bağlanılıyor…</string>
     <string name="home_profile_rejected">Güncellenen profilde hatalar var — mevcut bağlantı korunuyor</string>
+    <string name="home_start_refused">Android, VPN hizmetinin başlatılmasını reddetti. Uygulamanın arka plan kısıtlamalarını kontrol edin veya cihazı yeniden başlatın.</string>
     <string name="home_upload">Yükleme</string>
     <string name="home_download">İndirme</string>
     <string name="home_vpn_toggle">VPN bağlantısını aç veya kapat</string>
@@ -164,6 +165,7 @@
     <string name="settings_dns_builtin">Tünel üzerinden TCP</string>
     <string name="settings_show_exit_ip">Çıkış IP\'sini göster</string>
     <string name="settings_show_exit_ip_desc">Ana sayfada genel IP adresinizi ip.sb, ipwho.is veya ipinfo.io üzerinden sorgular</string>
+    <string name="settings_privacy_policy">Gizlilik Politikası</string>
     <string name="settings_about">Hakkında</string>
     <string name="settings_source_code">Kaynak kodu</string>
     <string name="settings_source_url">github.com/madeye/meow</string>

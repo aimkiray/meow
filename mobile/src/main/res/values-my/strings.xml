@@ -34,6 +34,7 @@
     <string name="home_disconnected">ချိတ်ဆက်မှု ဖြတ်ထားသည်</string>
     <string name="home_reconnecting_profile">အပ်ဒိတ်ထားသော ပရိုဖိုင်ဖြင့် ပြန်ချိတ်ဆက်နေသည်…</string>
     <string name="home_profile_rejected">အပ်ဒိတ်ထားသော ပရိုဖိုင်တွင် အမှားရှိသည် — လက်ရှိ ချိတ်ဆက်မှုကို ဆက်သုံးနေသည်</string>
+    <string name="home_start_refused">Android က VPN ဝန်ဆောင်မှုကို စတင်ခွင့်မပြုပါ။ အက်ပ်၏ နောက်ခံ ကန့်သတ်ချက်များကို စစ်ဆေးပါ သို့မဟုတ် စက်ကို ပြန်စတင်ပါ။</string>
     <string name="home_upload">အပ်လုဒ်</string>
     <string name="home_download">ဒေါင်းလုဒ်</string>
     <string name="home_vpn_toggle">VPN ဖွင့်/ပိတ်ရန်</string>
@@ -165,6 +166,7 @@
     <string name="settings_dns_builtin">Tunnel ဖြင့် TCP</string>
     <string name="settings_show_exit_ip">ထွက်ပေါက် IP ပြရန်</string>
     <string name="settings_show_exit_ip_desc">သင့် Public IP ကို ip.sb၊ ipwho.is သို့မဟုတ် ipinfo.io မှတစ်ဆင့် ရှာဖွေပြီး ပင်မတွင် ပြသည်</string>
+    <string name="settings_privacy_policy">ကိုယ်ရေးအချက်အလက် မူဝါဒ</string>
     <string name="settings_about">အကြောင်း</string>
     <string name="settings_source_code">ရင်းမြစ်ကုဒ်</string>
     <string name="settings_source_url">github.com/madeye/meow</string>

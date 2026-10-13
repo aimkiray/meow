@@ -29,6 +29,7 @@
     <string name="home_disconnected">Отключено</string>
     <string name="home_reconnecting_profile">Переподключение с обновлённым профилем…</string>
     <string name="home_profile_rejected">В обновлённом профиле есть ошибки — текущее подключение сохранено</string>
+    <string name="home_start_refused">Android не позволил запустить службу VPN. Проверьте фоновые ограничения приложения или перезагрузите устройство.</string>
     <string name="home_upload">Отправка</string>
     <string name="home_download">Загрузка</string>
     <string name="home_vpn_toggle">Включить или выключить VPN</string>
@@ -172,6 +173,7 @@
     <string name="settings_dns_builtin">TCP через туннель</string>
     <string name="settings_show_exit_ip">Показывать внешний IP</string>
     <string name="settings_show_exit_ip_desc">Определяет ваш внешний IP на вкладке «Главная» через ip.sb, ipwho.is или ipinfo.io</string>
+    <string name="settings_privacy_policy">Политика конфиденциальности</string>
     <string name="settings_about">О приложении</string>
     <string name="settings_source_code">Исходный код</string>
     <string name="settings_source_url">github.com/madeye/meow</string>

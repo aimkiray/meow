@@ -107,6 +107,7 @@ import io.github.madeye.meow.ui.util.writeText
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * Root of the Compose UI: four tabs plus the pushed detail screens.
@@ -335,9 +336,14 @@ private fun HomeRoute(
     val context = LocalContext.current
 
     val askForNotifications = rememberNotificationPermissionRequest()
+    val scope = rememberCoroutineScope()
+    val startRefused = stringResource(R.string.home_start_refused)
 
     fun startVpn() {
-        startVpnService(context)
+        if (!startVpnService(context)) {
+            scope.launch { snackbarHost.showSnackbar(startRefused) }
+            return
+        }
         // After the start, never before: the VPN must not wait on this answer.
         askForNotifications()
     }
@@ -400,11 +406,17 @@ private fun HomeRoute(
     SnackbarHost(snackbarHost)
 }
 
-private fun startVpnService(context: android.content.Context) {
+/** False when the system refused the start; the switch stays off by itself. */
+private fun startVpnService(context: android.content.Context): Boolean =
     // startForegroundService under the hood: the service answers its watchdog
     // with startForeground() on every onStartCommand path.
-    io.github.madeye.meow.bg.VpnService.start(context)
-}
+    try {
+        io.github.madeye.meow.bg.VpnService.start(context)
+    } catch (e: IllegalStateException) {
+        // Switch state follows the service's own stateChanged callback.
+        Timber.w(e, "startVpnService refused")
+        false
+    }
 
 /**
  * The Subscriptions page, with everything its rows need around it: the file
@@ -678,6 +690,11 @@ private fun SettingsRoute(
             onPerAppProxy = onPerAppProxy,
             onShowExitIpChange = viewModel::onShowExitIpChange,
             onThemeModeChange = viewModel::onThemeModeChange,
+            onPrivacyPolicy = {
+                if (!context.openUrl("https://meow-rs.github.io/meow-android/privacy-policy.html")) {
+                    scope.launch { snackbarHost.showSnackbar(noApp) }
+                }
+            },
             onCheckForUpdates = {
                 // Play policy lets a Play build update only through Play, so
                 // it just opens the listing. The flag is a constant, so R8

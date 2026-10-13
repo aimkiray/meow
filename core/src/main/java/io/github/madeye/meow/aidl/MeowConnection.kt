@@ -40,7 +40,14 @@ class MeowConnection(private var listenForBandwidth: Boolean = false) : ServiceC
         bindContext = context
         val intent = Intent(context, io.github.madeye.meow.bg.VpnService::class.java)
             .setAction(io.github.madeye.meow.utils.Action.SERVICE)
-        bound = context.bindService(intent, this, Context.BIND_AUTO_CREATE)
+        bound = try {
+            context.bindService(intent, this, Context.BIND_AUTO_CREATE)
+        } catch (e: SecurityException) {
+            // A :vpn launch failure only returns false; the bind throws
+            // when it is denied outright. Either way nothing is bound.
+            Timber.w(e, "bindService refused")
+            false
+        }
     }
 
     @Synchronized
@@ -85,7 +92,12 @@ class MeowConnection(private var listenForBandwidth: Boolean = false) : ServiceC
         bindContext?.let { ctx ->
             val intent = Intent(ctx, io.github.madeye.meow.bg.VpnService::class.java)
                 .setAction(io.github.madeye.meow.utils.Action.SERVICE)
-            bound = ctx.bindService(intent, this, Context.BIND_AUTO_CREATE)
+            bound = try {
+                ctx.bindService(intent, this, Context.BIND_AUTO_CREATE)
+            } catch (e: SecurityException) {
+                Timber.w(e, "bindService refused")
+                false
+            }
         }
     }
 
