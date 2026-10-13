@@ -689,6 +689,7 @@ private fun SettingsRoute(
             contentPadding = padding,
             onPerAppProxy = onPerAppProxy,
             onShowExitIpChange = viewModel::onShowExitIpChange,
+            onThemeModeChange = viewModel::onThemeModeChange,
             onPrivacyPolicy = {
                 if (!context.openUrl("https://meow-rs.github.io/meow-android/privacy-policy.html")) {
                     scope.launch { snackbarHost.showSnackbar(noApp) }

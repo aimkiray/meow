@@ -80,6 +80,7 @@ import io.github.madeye.meow.R
 import io.github.madeye.meow.ui.qr.QrAnalyzer
 import io.github.madeye.meow.ui.qr.decodeQrImage
 import io.github.madeye.meow.ui.theme.MeowTheme
+import io.github.madeye.meow.ui.theme.applyThemeMode
 import io.github.madeye.meow.ui.theme.meow
 import java.util.concurrent.Executors
 import kotlin.coroutines.cancellation.CancellationException
@@ -98,6 +99,11 @@ import timber.log.Timber
  * scan goes on. Nothing is added here: the caller still asks first.
  */
 class SubscriptionScanActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase)
+        applyThemeMode()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
