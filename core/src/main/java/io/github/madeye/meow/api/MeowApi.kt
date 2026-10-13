@@ -53,12 +53,15 @@ class MeowApi(
         const val DEFAULT_BASE_URL = "http://127.0.0.1:9090"
 
         /**
-         * Probe target for the delay endpoints: HTTPS to Cloudflare's anycast
-         * 204, the same URL sing-box and clash clients use. Plain HTTP to a
-         * Google anycast address lets a transit-path hijack or captive portal
-         * answer the probe in the endpoint's place.
+         * Probe target for the delay endpoints when a group sets no testUrl:
+         * the engine's own health-check default (mihomo's and sing-box's too).
+         * A node keeps one alive flag and delay whatever URL measured them,
+         * and url-test / fallback / load-balance groups pick by them, so a
+         * manual test should probe what the health check probes. HTTPS, as the
+         * engine verifies the certificate: over plain HTTP a transit-path
+         * hijack or captive portal could answer in the endpoint's place.
          */
-        const val DELAY_TEST_URL = "https://cp.cloudflare.com/generate_204"
+        const val DELAY_TEST_URL = "https://www.gstatic.com/generate_204"
 
         /**
          * Delay probes in flight at once. Each can hold its call open for the
@@ -66,11 +69,8 @@ class MeowApi(
          */
         const val PROBE_CONCURRENCY = 8
 
-        /**
-         * Retries for a probe that never got a dial out (HTTP 503). The wait
-         * doubles from 500 ms, so a transient answer costs at most 3.5 s.
-         */
-        private const val DELAY_PROBE_RETRIES = 3
+        /** Wait before the one retry of a probe the engine answered 503. */
+        private const val DELAY_PROBE_RETRY_MS = 500L
 
         /** Same page size as meow-ios's DNS screen (and the engine's default). */
         const val DNS_RESULTS_LIMIT = 256
@@ -189,21 +189,19 @@ class MeowApi(
             .readTimeout(timeoutMs + 5_000L, TimeUnit.MILLISECONDS)
             .build()
         val request = Request.Builder().url(requestUrl).build()
-        // A 503 is UrlTestError::Transport — the probe never got a dial out,
-        // routine just after a connect while the bypass path is still
-        // settling or on a DNS blip, so it retries on the same 500 ms
-        // doubling ramp as the log stream. Any other status fails as before.
-        var attempt = 0
-        while (true) {
-            try {
-                val body = execute(request, "testProxyDelay", client = scoped)
-                return decode("testProxyDelay") {
-                    json.parseToJsonElement(body).jsonObject["delay"]?.jsonPrimitive?.intOrNull ?: 0
-                }
-            } catch (e: MeowApiException.Http) {
-                if (e.code != 503 || attempt == DELAY_PROBE_RETRIES) throw e
-                delay(500L shl attempt++)
-            }
+        // A 503 is any failure but a timeout (UrlTestError::Transport): a DNS
+        // or dial blip, but also REJECT, a wrong password or a TLS error,
+        // which a retry only repeats, and every failed attempt records a 0 in
+        // the node's delay history. So one retry, not a ramp.
+        val body = try {
+            execute(request, "testProxyDelay", client = scoped)
+        } catch (e: MeowApiException.Http) {
+            if (e.code != 503) throw e
+            delay(DELAY_PROBE_RETRY_MS)
+            execute(request, "testProxyDelay", client = scoped)
+        }
+        return decode("testProxyDelay") {
+            json.parseToJsonElement(body).jsonObject["delay"]?.jsonPrimitive?.intOrNull ?: 0
         }
     }
 

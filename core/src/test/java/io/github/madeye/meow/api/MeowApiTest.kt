@@ -296,11 +296,11 @@ class MeowApiTest {
     }
 
     @Test
-    fun `testProxyDelay throws only after the last retry on a persistent 503`() = runTest {
-        repeat(4) { enqueue("""{"message": "An error occurred in the delay test"}""", code = 503) }
+    fun `testProxyDelay throws after one retry on a persistent 503`() = runTest {
+        repeat(2) { enqueue("""{"message": "An error occurred in the delay test"}""", code = 503) }
 
-        // Inside runTest so the backoff sits on virtual time; assertThrows
-        // would need a runBlocking block that pays the 3.5 s ramp for real.
+        // Inside runTest so the retry wait sits on virtual time; assertThrows
+        // would need a runBlocking block that pays the 500 ms for real.
         try {
             api.testProxyDelay("Tokyo 01")
             fail("a persistent 503 should throw")
@@ -309,8 +309,8 @@ class MeowApiTest {
             assertEquals("testProxyDelay", e.operation)
         }
 
-        // One initial attempt plus three retries.
-        assertEquals(4, server.requestCount)
+        // One attempt plus one retry.
+        assertEquals(2, server.requestCount)
     }
 
     @Test
