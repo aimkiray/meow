@@ -39,9 +39,20 @@ class VpnService : BaseVpnService(), BaseService.Interface {
          * answers the call with startForeground() on every path. A background
          * caller with no such exemption gets an IllegalStateException
          * (ForegroundServiceStartNotAllowedException on Android 12+).
+         *
+         * False when the system could not launch the `:vpn` process for the
+         * service: AMS reports any such failure as "Unable to start service
+         * …: process is bad", thrown in the caller as a SecurityException.
          */
-        fun start(context: Context) {
+        fun start(context: Context): Boolean = try {
             ContextCompat.startForegroundService(context, Intent(context, VpnService::class.java))
+            true
+        } catch (e: SecurityException) {
+            // Uncaught it took down the caller, the UI process (#119). The VPN
+            // just stays Stopped; the caller tells the user. IllegalState keeps
+            // propagating: the QS tile's activity fallback depends on it.
+            Timber.w(e, "VpnService: start refused")
+            false
         }
     }
 
