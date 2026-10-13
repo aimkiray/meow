@@ -51,13 +51,26 @@ class MeowApi(
 ) {
     companion object {
         const val DEFAULT_BASE_URL = "http://127.0.0.1:9090"
-        const val DELAY_TEST_URL = "http://www.gstatic.com/generate_204"
+
+        /**
+         * Probe target for the delay endpoints when a group sets no testUrl:
+         * the engine's own health-check default (mihomo's and sing-box's too).
+         * A node keeps one alive flag and delay whatever URL measured them,
+         * and url-test / fallback / load-balance groups pick by them, so a
+         * manual test should probe what the health check probes. HTTPS, as the
+         * engine verifies the certificate: over plain HTTP a transit-path
+         * hijack or captive portal could answer in the endpoint's place.
+         */
+        const val DELAY_TEST_URL = "https://www.gstatic.com/generate_204"
 
         /**
          * Delay probes in flight at once. Each can hold its call open for the
          * full probe timeout, so a large group is worked through in waves.
          */
         const val PROBE_CONCURRENCY = 8
+
+        /** Wait before the one retry of a probe the engine answered 503. */
+        private const val DELAY_PROBE_RETRY_MS = 500L
 
         /** Same page size as meow-ios's DNS screen (and the engine's default). */
         const val DNS_RESULTS_LIMIT = 256
@@ -175,7 +188,18 @@ class MeowApi(
             .dispatcher(probeDispatcher)
             .readTimeout(timeoutMs + 5_000L, TimeUnit.MILLISECONDS)
             .build()
-        val body = execute(Request.Builder().url(requestUrl).build(), "testProxyDelay", client = scoped)
+        val request = Request.Builder().url(requestUrl).build()
+        // A 503 is any failure but a timeout (UrlTestError::Transport): a DNS
+        // or dial blip, but also REJECT, a wrong password or a TLS error,
+        // which a retry only repeats, and every failed attempt records a 0 in
+        // the node's delay history. So one retry, not a ramp.
+        val body = try {
+            execute(request, "testProxyDelay", client = scoped)
+        } catch (e: MeowApiException.Http) {
+            if (e.code != 503) throw e
+            delay(DELAY_PROBE_RETRY_MS)
+            execute(request, "testProxyDelay", client = scoped)
+        }
         return decode("testProxyDelay") {
             json.parseToJsonElement(body).jsonObject["delay"]?.jsonPrimitive?.intOrNull ?: 0
         }
