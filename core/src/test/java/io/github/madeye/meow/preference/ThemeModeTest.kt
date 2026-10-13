@@ -1,9 +1,30 @@
 package io.github.madeye.meow.preference
 
+import android.content.res.Configuration
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ThemeModeTest {
+
+    @Test
+    fun `only the forced modes override the night bits`() {
+        assertNull(ThemeMode.SYSTEM.nightMode)
+        assertEquals(Configuration.UI_MODE_NIGHT_NO, ThemeMode.LIGHT.nightMode)
+        assertEquals(Configuration.UI_MODE_NIGHT_YES, ThemeMode.DARK.nightMode)
+    }
+
+    @Test
+    fun `the preference starts from the stored mode and writes every pick`() {
+        val written = mutableListOf<ThemeMode>()
+        val pref = ThemeModePreference(read = { ThemeMode.DARK }, write = { written += it })
+        assertEquals(ThemeMode.DARK, pref.mode.value)
+
+        pref.set(ThemeMode.LIGHT)
+
+        assertEquals(ThemeMode.LIGHT, pref.mode.value)
+        assertEquals(listOf(ThemeMode.LIGHT), written)
+    }
 
     @Test
     fun `toWire round-trips through fromWire for every mode`() {

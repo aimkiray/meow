@@ -1,35 +1,26 @@
 package io.github.madeye.meow.preference
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 /**
- * [DataStore.themeMode] as a flow, so `MainActivity`'s `MeowTheme` follows the
- * Settings pick the moment it moves. Only the UI process reads it, so —
- * unlike [RouteModeStore] — SharedPreferences' read-once caching is fine.
+ * [DataStore.themeMode] as a flow, so Settings shows the pick the moment it
+ * moves and `MainActivity` recreates itself to apply it. Only the UI process
+ * reads it, so — unlike [RouteModeStore] — SharedPreferences' read-once
+ * caching is fine.
  *
- * `null` until the first read lands. That read can touch disk, so it runs off
- * the main thread, and until it does the app follows the system theme.
+ * Unlike [ExitIpPreference], the first read is synchronous: an Activity
+ * applies the mode in `attachBaseContext`, before its first frame, and any
+ * later answer would show the wrong theme first. It is one small preferences
+ * file, read once per process.
  */
 class ThemeModePreference(
-    scope: CoroutineScope,
-    private val read: () -> ThemeMode = { ThemeMode.fromWire(DataStore.themeMode) },
+    read: () -> ThemeMode = { ThemeMode.fromWire(DataStore.themeMode) },
     private val write: (ThemeMode) -> Unit = { DataStore.themeMode = it.toWire() },
 ) {
-    private val _mode = MutableStateFlow<ThemeMode?>(null)
-    val mode: StateFlow<ThemeMode?> = _mode.asStateFlow()
-
-    init {
-        scope.launch(Dispatchers.IO) {
-            val stored = read()
-            // A set() that beat the first read is newer; keep it.
-            _mode.compareAndSet(null, stored)
-        }
-    }
+    private val _mode = MutableStateFlow(read())
+    val mode: StateFlow<ThemeMode> = _mode.asStateFlow()
 
     fun set(mode: ThemeMode) {
         _mode.value = mode

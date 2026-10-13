@@ -76,8 +76,8 @@ object AppGraph {
     /** Node and route-mode switches, for the exit-IP card; see [RouteChanges]. */
     val routeChanges: RouteChanges by lazy { RouteChanges() }
 
-    /** Settings picks it; MainActivity's MeowTheme follows. */
-    val themeMode: ThemeModePreference by lazy { ThemeModePreference(scope) }
+    /** Settings picks it; each Activity applies it, see `applyThemeMode`. */
+    val themeMode: ThemeModePreference by lazy { ThemeModePreference() }
 
     fun init(context: Context) {
         appContext = context.applicationContext

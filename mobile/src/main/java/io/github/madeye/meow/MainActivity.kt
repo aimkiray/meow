@@ -1,24 +1,22 @@
 package io.github.madeye.meow
 
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.core.view.WindowCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.madeye.meow.bg.MeowInstance
 import io.github.madeye.meow.preference.ThemeMode
 import io.github.madeye.meow.ui.MeowApp
 import io.github.madeye.meow.ui.screens.subscribe.InstallConfigLink
 import io.github.madeye.meow.ui.theme.MeowTheme
+import io.github.madeye.meow.ui.theme.applyThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,9 +45,22 @@ class MainActivity : ComponentActivity() {
     /** Raw install-config link awaiting the user's answer; cleared once answered. */
     private var pendingLink by mutableStateOf<String?>(null)
 
+    /** Settings' theme pick this instance was created with. */
+    private lateinit var themeMode: ThemeMode
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase)
+        themeMode = applyThemeMode()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // A new pick in Settings: only a new instance can apply it.
+        scope.launch {
+            AppGraph.themeMode.mode.collect { if (it != themeMode) recreate() }
+        }
 
         AppGraph.vpn.bind(this)
 
@@ -82,22 +93,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val link = pendingLink
             val installLink = remember(link) { link?.let(InstallConfigLink::parse) }
-            // null until the preference's first disk read lands: system wins.
-            val themeMode by AppGraph.themeMode.mode.collectAsStateWithLifecycle()
-            val darkTheme = when (themeMode) {
-                ThemeMode.LIGHT -> false
-                ThemeMode.DARK -> true
-                else -> isSystemInDarkTheme()
-            }
-            // enableEdgeToEdge() read the system night mode once, so a forced
-            // theme leaves stale bar icons: drive them from the resolved mode.
-            SideEffect {
-                WindowCompat.getInsetsController(window, window.decorView).run {
-                    isAppearanceLightStatusBars = !darkTheme
-                    isAppearanceLightNavigationBars = !darkTheme
-                }
-            }
-            MeowTheme(darkTheme = darkTheme) {
+            MeowTheme {
                 MeowApp(
                     autoConnect = autoConnect,
                     installLink = installLink,

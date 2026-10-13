@@ -72,7 +72,7 @@ class SettingsViewModel(
             appVersion = app,
             engineVersion = engine,
             showExitIp = showExitIp == true,
-            themeMode = mode ?: ThemeMode.SYSTEM,
+            themeMode = mode,
             checkingForUpdate = isChecking,
             update = newer,
         )

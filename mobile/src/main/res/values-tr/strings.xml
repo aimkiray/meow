@@ -181,7 +181,7 @@
     <string name="settings_update_later">Daha sonra</string>
     <string name="settings_update_no_app">Bağlantıyı açabilecek uygulama yok</string>
     <string name="settings_theme">Görünüm</string>
-    <string name="theme_mode_system">Sistemi izle</string>
+    <string name="theme_mode_system">Sistem varsayılanı</string>
     <string name="theme_mode_light">Açık</string>
     <string name="theme_mode_dark">Koyu</string>
 
