@@ -2,8 +2,10 @@ package io.github.madeye.meow.tile
 
 import android.net.VpnService
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import io.github.madeye.meow.R
 import timber.log.Timber
 
 /**
@@ -21,13 +23,7 @@ class TileConnectActivity : ComponentActivity() {
     private val consent = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            try {
-                startVpnService()
-            } catch (e: IllegalStateException) {
-                Timber.w(e, "startVpnService refused")
-            }
-        }
+        if (result.resultCode == RESULT_OK) start()
         finish()
     }
 
@@ -38,14 +34,23 @@ class TileConnectActivity : ComponentActivity() {
         val request = VpnService.prepare(this)
         if (request == null) {
             // Being in front lifts the background-start limit.
-            try {
-                startVpnService()
-            } catch (e: IllegalStateException) {
-                Timber.w(e, "startVpnService refused")
-            }
+            start()
             finish()
         } else {
             consent.launch(request)
+        }
+    }
+
+    private fun start() {
+        val started = try {
+            startVpnService()
+        } catch (e: IllegalStateException) {
+            Timber.w(e, "startVpnService refused")
+            false
+        }
+        // The application context: this activity finishes right away.
+        if (!started) {
+            Toast.makeText(applicationContext, R.string.home_start_refused, Toast.LENGTH_LONG).show()
         }
     }
 }

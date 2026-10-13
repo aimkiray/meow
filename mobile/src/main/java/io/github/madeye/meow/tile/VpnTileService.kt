@@ -103,11 +103,11 @@ class VpnTileService : TileService() {
      * ([VpnService.start]); on API 31+ starting a foreground service from the
      * background needs an exemption, and the shade's binding to a tile is not
      * guaranteed to provide one (ForegroundServiceStartNotAllowedException is
-     * an IllegalStateException).
+     * an IllegalStateException). A launch failure is false too, so that
+     * [TileConnectActivity] retries it and tells the user if it fails again.
      */
     private fun startInPlace(): Boolean = try {
         startVpnService()
-        true
     } catch (e: IllegalStateException) {
         Timber.i(e, "background start refused; finishing the start in an activity")
         false
@@ -135,7 +135,6 @@ class VpnTileService : TileService() {
  * The Home switch's start (`startVpnService` in MeowApp.kt), shared by the
  * tile and [TileConnectActivity]: [VpnService.start], whose
  * startForegroundService the service answers with startForeground().
+ * False when the system could not launch the service.
  */
-internal fun Context.startVpnService() {
-    VpnService.start(this)
-}
+internal fun Context.startVpnService(): Boolean = VpnService.start(this)

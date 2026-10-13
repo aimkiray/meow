@@ -41,6 +41,7 @@
     <string name="home_disconnected">تم قطع الاتصال</string>
     <string name="home_reconnecting_profile">جارٍ إعادة الاتصال باستخدام ملف التعريف المحدّث…</string>
     <string name="home_profile_rejected">يحتوي ملف التعريف المحدّث على أخطاء، لذا سيستمر الاتصال الحالي</string>
+    <string name="home_start_refused">رفض نظام Android تشغيل خدمة VPN. تحقّق من قيود التشغيل في الخلفية للتطبيق أو أعِد تشغيل الجهاز.</string>
     <string name="home_upload">رفع</string>
     <string name="home_download">تنزيل</string>
     <string name="home_vpn_toggle">تشغيل VPN أو إيقافه</string>

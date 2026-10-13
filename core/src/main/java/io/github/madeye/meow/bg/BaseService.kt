@@ -231,7 +231,8 @@ object BaseService {
                 data.notification?.destroy()
                 data.notification = null
             } catch (e: SecurityException) {
-                // Bad-process flag on the app: same refusal, same handling.
+                // A refused launch (see [VpnService.start]); not expected
+                // here, as :vpn is already running, but handled the same.
                 Timber.w(e, "restart refused")
                 data.notification?.destroy()
                 data.notification = null

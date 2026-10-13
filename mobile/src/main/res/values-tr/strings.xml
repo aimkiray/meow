@@ -29,6 +29,7 @@
     <string name="home_disconnected">Bağlantı kesildi</string>
     <string name="home_reconnecting_profile">Güncellenen profille yeniden bağlanılıyor…</string>
     <string name="home_profile_rejected">Güncellenen profilde hatalar var — mevcut bağlantı korunuyor</string>
+    <string name="home_start_refused">Android, VPN hizmetinin başlatılmasını reddetti. Uygulamanın arka plan kısıtlamalarını kontrol edin veya cihazı yeniden başlatın.</string>
     <string name="home_upload">Yükleme</string>
     <string name="home_download">İndirme</string>
     <string name="home_vpn_toggle">VPN bağlantısını aç veya kapat</string>

@@ -336,9 +336,14 @@ private fun HomeRoute(
     val context = LocalContext.current
 
     val askForNotifications = rememberNotificationPermissionRequest()
+    val scope = rememberCoroutineScope()
+    val startRefused = stringResource(R.string.home_start_refused)
 
     fun startVpn() {
-        startVpnService(context)
+        if (!startVpnService(context)) {
+            scope.launch { snackbarHost.showSnackbar(startRefused) }
+            return
+        }
         // After the start, never before: the VPN must not wait on this answer.
         askForNotifications()
     }
@@ -401,17 +406,17 @@ private fun HomeRoute(
     SnackbarHost(snackbarHost)
 }
 
-private fun startVpnService(context: android.content.Context) {
+/** False when the system refused the start; the switch stays off by itself. */
+private fun startVpnService(context: android.content.Context): Boolean =
     // startForegroundService under the hood: the service answers its watchdog
     // with startForeground() on every onStartCommand path.
     try {
         io.github.madeye.meow.bg.VpnService.start(context)
     } catch (e: IllegalStateException) {
-        // A refused start leaves the UI untouched: switch state follows the
-        // service's own stateChanged callback.
+        // Switch state follows the service's own stateChanged callback.
         Timber.w(e, "startVpnService refused")
+        false
     }
-}
 
 /**
  * The Subscriptions page, with everything its rows need around it: the file

@@ -37,6 +37,7 @@
     <string name="home_disconnected">قطع شد</string>
     <string name="home_reconnecting_profile">در حال اتصال دوباره با پروفایل به‌روزشده…</string>
     <string name="home_profile_rejected">پروفایل به‌روزشده خطا دارد؛ اتصال فعلی حفظ می‌شود</string>
+    <string name="home_start_refused">اندروید اجازهٔ راه‌اندازی سرویس VPN را نداد. محدودیت‌های پس‌زمینهٔ برنامه را بررسی کنید یا دستگاه را دوباره راه‌اندازی کنید.</string>
     <string name="home_upload">آپلود</string>
     <string name="home_download">دانلود</string>
     <string name="home_vpn_toggle">روشن یا خاموش کردن VPN</string>

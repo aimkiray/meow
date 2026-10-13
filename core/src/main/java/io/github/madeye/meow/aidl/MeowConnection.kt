@@ -43,9 +43,8 @@ class MeowConnection(private var listenForBandwidth: Boolean = false) : ServiceC
         bound = try {
             context.bindService(intent, this, Context.BIND_AUTO_CREATE)
         } catch (e: SecurityException) {
-            // Bad-process flag: the bind never happens, so bound must stay
-            // false — disconnect() would unbind a connection that was never
-            // made and crash on IllegalArgumentException.
+            // A :vpn launch failure only returns false; the bind throws
+            // when it is denied outright. Either way nothing is bound.
             Timber.w(e, "bindService refused")
             false
         }

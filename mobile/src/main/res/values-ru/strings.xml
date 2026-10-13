@@ -29,6 +29,7 @@
     <string name="home_disconnected">Отключено</string>
     <string name="home_reconnecting_profile">Переподключение с обновлённым профилем…</string>
     <string name="home_profile_rejected">В обновлённом профиле есть ошибки — текущее подключение сохранено</string>
+    <string name="home_start_refused">Android не позволил запустить службу VPN. Проверьте фоновые ограничения приложения или перезагрузите устройство.</string>
     <string name="home_upload">Отправка</string>
     <string name="home_download">Загрузка</string>
     <string name="home_vpn_toggle">Включить или выключить VPN</string>
