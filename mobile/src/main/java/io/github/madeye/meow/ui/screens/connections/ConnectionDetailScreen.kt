@@ -14,11 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,24 +31,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.madeye.meow.R
 import io.github.madeye.meow.api.Connection
+import io.github.madeye.meow.api.ConnectionNote
 import io.github.madeye.meow.ui.components.GlassCard
+import io.github.madeye.meow.ui.components.SectionHeader
 import io.github.madeye.meow.ui.theme.MeowTextStyles
 import io.github.madeye.meow.ui.theme.meow
 import io.github.madeye.meow.ui.util.Formatters
+import io.github.madeye.meow.ui.util.copyToClipboard
 import io.github.madeye.meow.ui.util.regionFlag
 import io.github.madeye.meow.ui.util.regionName
 import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.delay
 
 /**
  * One connection: where it went and when, the policy and rule that sent it
- * there, and its traffic. A tap on the rule opens it in the rule list.
+ * there, its traffic, and the engine's notes on how it got there. A tap on
+ * the rule opens it in the rule list.
  */
 @Composable
 fun ConnectionDetailScreen(
@@ -133,8 +142,68 @@ fun ConnectionDetailScreen(
             Line(R.string.traffic_upload, Formatters.bytes(connection.upload)),
             Line(R.string.traffic_download, Formatters.bytes(connection.download)),
         )
+        NotesSection(state.notes)
     }
 }
+
+/**
+ * The engine's account of the connection, one timed step per row: the
+ * fake-IP it reversed, the DNS lookups a rule needed and what they returned,
+ * the rule that matched, the dial and the close. Selectable, so a step can
+ * be copied into a bug report, and the header copies them all.
+ */
+@Composable
+private fun NotesSection(notes: List<ConnectionNote>) {
+    if (notes.isEmpty()) return
+    val muted = MaterialTheme.meow.mutedText
+    val context = LocalContext.current
+    val title = stringResource(R.string.connection_detail_notes)
+    Column(Modifier.testTag("connection_detail_notes")) {
+        // Bottom-aligned, the icon centres on the header text above its padding.
+        Row(verticalAlignment = Alignment.Bottom) {
+            SectionHeader(title, Modifier.weight(1f))
+            IconButton(
+                onClick = { context.copyToClipboard(title, notes.asPlainText()) },
+                modifier = Modifier.size(32.dp).testTag("connection_detail_notes_copy"),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ContentCopy,
+                    contentDescription = stringResource(R.string.connection_detail_notes_copy),
+                    tint = muted,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+        GlassCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+            SelectionContainer {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    notes.forEach { note ->
+                        Row {
+                            Text(
+                                text = Formatters.clockTimeMillis(note.time),
+                                style = MaterialTheme.typography.bodySmall.merge(MeowTextStyles.monoDigits),
+                                color = muted,
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = note.text,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The notes as the page shows them, one "time  text" line each. */
+internal fun List<ConnectionNote>.asPlainText(zone: ZoneId = ZoneId.systemDefault()): String =
+    joinToString("\n") { note ->
+        val time = Formatters.clockTimeMillis(note.time, zone)
+        if (time.isEmpty()) note.text else "$time  ${note.text}"
+    }
 
 private const val PLACEHOLDER = "—"
 
