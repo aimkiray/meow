@@ -60,6 +60,8 @@ import io.github.madeye.meow.bg.BaseService
 import io.github.madeye.meow.ui.components.MeowScaffold
 import io.github.madeye.meow.ui.nav.Dest
 import io.github.madeye.meow.ui.nav.TABS
+import io.github.madeye.meow.ui.screens.connections.ConnectionDetailScreen
+import io.github.madeye.meow.ui.screens.connections.ConnectionDetailViewModel
 import io.github.madeye.meow.ui.screens.connections.ConnectionsActions
 import io.github.madeye.meow.ui.screens.connections.ConnectionsScreen
 import io.github.madeye.meow.ui.screens.connections.ConnectionsViewModel
@@ -201,7 +203,7 @@ private fun MeowNavHost(
                 onOpenSubscriptions = {
                     navController.navigate(Dest.Subscriptions) { launchSingleTop = true }
                 },
-                onRules = { navController.navigate(Dest.Rules) },
+                onRules = { navController.navigate(Dest.Rules()) },
                 bottomBar = { BottomBar(navController, onTab) },
             )
         }
@@ -262,7 +264,18 @@ private fun MeowNavHost(
             )
         }
         composable<Dest.Traffic> { TrafficRoute(onBack = navController::popBackStack) }
-        composable<Dest.Connections> { ConnectionsRoute(onBack = navController::popBackStack) }
+        composable<Dest.Connections> {
+            ConnectionsRoute(
+                onOpen = { id -> navController.navigate(Dest.ConnectionDetail(id)) },
+                onBack = navController::popBackStack,
+            )
+        }
+        composable<Dest.ConnectionDetail> {
+            ConnectionDetailRoute(
+                onOpenRule = { index -> navController.navigate(Dest.Rules(focus = index)) },
+                onBack = navController::popBackStack,
+            )
+        }
         composable<Dest.Rules> { RulesRoute(onBack = navController::popBackStack) }
         composable<Dest.Logs> { LogsRoute(onBack = navController::popBackStack) }
         composable<Dest.Dns> { DnsRoute(onBack = navController::popBackStack) }
@@ -935,7 +948,7 @@ private fun YamlEditorRoute(
 }
 
 @Composable
-private fun ConnectionsRoute(onBack: () -> Unit) {
+private fun ConnectionsRoute(onOpen: (id: String) -> Unit, onBack: () -> Unit) {
     val viewModel: ConnectionsViewModel = viewModel(factory = AppGraph.viewModelFactory)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -957,8 +970,47 @@ private fun ConnectionsRoute(onBack: () -> Unit) {
             contentPadding = padding,
             onQueryChange = viewModel::onQueryChange,
             onTabChange = viewModel::onTabChange,
-            onClose = viewModel::close,
+            onOpen = onOpen,
         )
+    }
+}
+
+@Composable
+private fun ConnectionDetailRoute(onOpenRule: (index: Int) -> Unit, onBack: () -> Unit) {
+    val viewModel: ConnectionDetailViewModel = viewModel(factory = AppGraph.viewModelFactory)
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    MeowScaffold(
+        title = stringResource(R.string.connection_detail_title),
+        navigationIcon = { BackButton(onBack) },
+        actions = {
+            // Closing a connection lives here, not on its row in the list.
+            if (state.active) {
+                var menuOpen by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { menuOpen = true }, modifier = Modifier.testTag("connection_detail_menu")) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.common_more_options))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(R.string.connection_detail_close),
+                                    color = MaterialTheme.meow.danger,
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                viewModel.close()
+                            },
+                            modifier = Modifier.testTag("connection_detail_close"),
+                        )
+                    }
+                }
+            }
+        },
+    ) { padding ->
+        ConnectionDetailScreen(state = state, contentPadding = padding, onOpenRule = onOpenRule)
     }
 }
 

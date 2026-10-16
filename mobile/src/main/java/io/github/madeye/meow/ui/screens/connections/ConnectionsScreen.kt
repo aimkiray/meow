@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.AlertDialog
@@ -49,6 +47,7 @@ import io.github.madeye.meow.ui.theme.meow
 import io.github.madeye.meow.ui.util.Formatters
 import java.time.Instant
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -87,27 +86,8 @@ class ConnectionsViewModel(
     private val query = MutableStateFlow("")
     private val tab = MutableStateFlow(ConnectionsTab.Active)
 
-    /**
-     * Polls the engine only while collected, so it starts and stops with
-     * [uiState]'s subscription instead of running for the ViewModel's lifetime.
-     * Diffing lives in [recentConnections], which outlives this ViewModel.
-     */
-    private val polling = flow<Unit> {
-        while (true) {
-            val ticket = recentConnections.snapshotTicket()
-            try {
-                recentConnections.onSnapshot(api.connections().connections, ticket)
-            } catch (e: MeowApiException) {
-                if (e is MeowApiException.Unreachable) {
-                    // The controller is gone (VPN stopped). The flows from the
-                    // last snapshot are done; file them under Recent. A later
-                    // successful poll puts back anything still open.
-                    recentConnections.onSnapshot(emptyList(), ticket)
-                }
-            }
-            delay(POLL_INTERVAL_MS)
-        }
-    }.onStart { emit(Unit) }
+    /** Runs only while [uiState] is collected, not for the ViewModel's lifetime. */
+    private val polling = connectionsPolling(api, recentConnections)
 
     val uiState: StateFlow<ConnectionsUiState> =
         combine(recentConnections.lists, query, tab, polling) { lists, search, selected, _ ->
@@ -129,13 +109,6 @@ class ConnectionsViewModel(
 
     fun onTabChange(value: ConnectionsTab) { tab.value = value }
 
-    fun close(id: String) {
-        viewModelScope.launch {
-            recentConnections.closeLocal(id)
-            runCatching { api.closeConnection(id) }
-        }
-    }
-
     fun closeAll() {
         viewModelScope.launch {
             recentConnections.closeAllLocal()
@@ -150,11 +123,31 @@ class ConnectionsViewModel(
         val lists = recentConnections.lists.value
         return ConnectionsUiState(connections = lists.active, recent = lists.recent)
     }
-
-    private companion object {
-        const val POLL_INTERVAL_MS = 1_000L
-    }
 }
+
+private const val POLL_INTERVAL_MS = 1_000L
+
+/**
+ * Feeds [store] a `/connections` snapshot every second, only while collected,
+ * so polling starts and stops with the screen collecting it: the list, or one
+ * connection's detail page. Diffing lives in [store], which outlives both.
+ */
+internal fun connectionsPolling(api: MeowApi, store: RecentConnectionsStore): Flow<Unit> = flow<Unit> {
+    while (true) {
+        val ticket = store.snapshotTicket()
+        try {
+            store.onSnapshot(api.connections().connections, ticket)
+        } catch (e: MeowApiException) {
+            if (e is MeowApiException.Unreachable) {
+                // The controller is gone (VPN stopped). The flows from the
+                // last snapshot are done; file them under Recent. A later
+                // successful poll puts back anything still open.
+                store.onSnapshot(emptyList(), ticket)
+            }
+        }
+        delay(POLL_INTERVAL_MS)
+    }
+}.onStart { emit(Unit) }
 
 @Composable
 fun ConnectionsScreen(
@@ -162,7 +155,7 @@ fun ConnectionsScreen(
     contentPadding: PaddingValues,
     onQueryChange: (String) -> Unit,
     onTabChange: (ConnectionsTab) -> Unit,
-    onClose: (String) -> Unit,
+    onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -238,6 +231,7 @@ fun ConnectionsScreen(
                             R.string.connections_last_seen,
                             Formatters.timestamp(recent.lastSeenAtMillis),
                         ),
+                        onOpen = { onOpen(recent.connection.id) },
                     )
                 }
             }
@@ -250,7 +244,7 @@ fun ConnectionsScreen(
                     ConnectionCard(
                         connection = connection,
                         elapsed = Formatters.elapsedSince(connection.start),
-                        onClose = { onClose(connection.id) },
+                        onOpen = { onOpen(connection.id) },
                     )
                 }
             }
@@ -273,57 +267,55 @@ private fun tabLabel(tab: ConnectionsTab, count: Int): String {
 private fun ConnectionCard(
     connection: Connection,
     elapsed: String,
+    onOpen: () -> Unit,
     footer: String? = null,
-    onClose: (() -> Unit)? = null,
 ) {
     val colors = MaterialTheme.meow
-    val host = connection.metadata.host.ifEmpty { connection.metadata.destinationIP }
 
-    GlassCard(contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "$host:${connection.metadata.destinationPort}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (connection.chains.isNotEmpty()) {
-                    Text(
-                        text = connection.chains.reversed().joinToString(" → "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.mutedText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Text(
-                    text = buildString {
-                        append("↑ ${Formatters.bytes(connection.upload)}")
-                        append("  ↓ ${Formatters.bytes(connection.download)}")
-                        if (elapsed.isNotEmpty()) append("  $elapsed")
-                    },
-                    style = MaterialTheme.typography.bodySmall.merge(MeowTextStyles.monoDigits),
-                    color = colors.mutedText,
-                )
-                if (!footer.isNullOrEmpty()) {
-                    Text(
-                        text = footer,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.mutedText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            if (onClose != null) {
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Filled.Close, contentDescription = null, tint = colors.danger)
-                }
-            }
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onOpen,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        Text(
+            text = connection.address,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (connection.chains.isNotEmpty()) {
+            Text(
+                text = connection.chains.reversed().joinToString(" → "),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.mutedText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Text(
+            text = buildString {
+                append("↑ ${Formatters.bytes(connection.upload)}")
+                append("  ↓ ${Formatters.bytes(connection.download)}")
+                if (elapsed.isNotEmpty()) append("  $elapsed")
+            },
+            style = MaterialTheme.typography.bodySmall.merge(MeowTextStyles.monoDigits),
+            color = colors.mutedText,
+        )
+        if (!footer.isNullOrEmpty()) {
+            Text(
+                text = footer,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.mutedText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
+
+/** `host:port`, or the destination IP's when the flow has no host name. */
+internal val Connection.address: String
+    get() = "${metadata.host.ifEmpty { metadata.destinationIP }}:${metadata.destinationPort}"
 
 @Composable
 fun ConnectionsActions(
