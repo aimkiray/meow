@@ -56,6 +56,7 @@ class PerAppProxyViewModel(
     private val query = MutableStateFlow("")
     private val showSystem = MutableStateFlow(false)
     private var saving = false
+    private var installedPackages: Set<String> = emptySet()
 
     /** One-shot outcomes for the route to snackbar. */
     sealed interface PerAppEvent {
@@ -107,6 +108,7 @@ class PerAppProxyViewModel(
                 // uninstalled. An empty baseline means the enumeration
                 // failed, not that everything vanished.
                 val installed = installedApps.installedPackageNames()
+                installedPackages = installed
                 if (installed.isNotEmpty()) {
                     config.value = config.value.copy(
                         packages = config.value.packages intersect installed,
@@ -176,24 +178,22 @@ class PerAppProxyViewModel(
             _events.tryEmit(PerAppEvent.ImportInvalid)
             return
         }
-        viewModelScope.launch {
-            val installed = installedApps.installedPackageNames()
-            // An empty census means enumeration failed, not that nothing is
-            // installed — the init prune reads it the same way. Apply the
-            // list verbatim rather than silently dropping all of it.
-            val applied = if (installed.isEmpty()) {
-                parsed.packages
-            } else {
-                parsed.packages intersect installed
-            }
-            config.value = config.value.copy(
-                mode = parsed.mode ?: config.value.mode,
-                packages = applied,
-            )
-            _events.emit(
-                PerAppEvent.Imported(applied.size, parsed.packages.size - applied.size),
-            )
+        // Reuse the census loaded with the picker. Applying the selection
+        // synchronously ensures an immediate Save sees this import, and a
+        // second import or manual edit cannot be overwritten by a late census.
+        val applied = if (installedPackages.isEmpty()) {
+            // Enumeration unavailable: preserve the imported list verbatim.
+            parsed.packages
+        } else {
+            parsed.packages intersect installedPackages
         }
+        config.value = config.value.copy(
+            mode = parsed.mode ?: config.value.mode,
+            packages = applied,
+        )
+        _events.tryEmit(
+            PerAppEvent.Imported(applied.size, parsed.packages.size - applied.size),
+        )
     }
 
     fun save(onSaved: () -> Unit) {
